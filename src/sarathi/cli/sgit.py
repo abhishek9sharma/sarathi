@@ -2,6 +2,7 @@ import subprocess
 
 from sarathi.llm.call_llm import send_prompt_to_api
 from sarathi.llm.prompts import prompt_formats
+from sarathi.utils.formatters import format_green
 
 
 def get_staged_diff():
@@ -18,7 +19,7 @@ def generate_commit_message():
 
 
 def get_user_confirmation():
-    return input("Do you want to proceed y/n: ").strip() == "y"
+    return input(f"Do you want to proceed " + format_green("y/n")+": ").strip() == "y"
 
 
 def setup_args(subparsers, opname):
