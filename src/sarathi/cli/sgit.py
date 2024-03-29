@@ -19,7 +19,7 @@ def generate_commit_message():
 
 
 def get_user_confirmation():
-    return input(f"Do you want to proceed " + format_green("y/n")+": ").strip() == "y"
+    return input(f"Do you want to proceed " + format_green("y/n") + ": ").strip() == "y"
 
 
 def setup_args(subparsers, opname):

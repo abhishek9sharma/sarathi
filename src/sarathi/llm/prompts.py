@@ -9,5 +9,6 @@ prompt_formats = {
                           - User impertaive moodd in the subject line
                           - Use a maximum of 50 words
                           - Use standard English
+                          - Try to be concise. Do not write multiple lines if not required
                         """
 }
