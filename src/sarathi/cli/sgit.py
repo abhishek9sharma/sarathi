@@ -1,7 +1,7 @@
 import subprocess
 
-from sarathi.llm.call_llm import send_prompt_to_api
-from sarathi.llm.prompts import prompt_formats
+from sarathi.llm.call_llm import call_llm_model
+from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.formatters import format_green
 
 
@@ -13,8 +13,8 @@ def get_staged_diff():
 
 def generate_commit_message():
     diff = get_staged_diff()
-    prompt = prompt_formats["autocommit"]
-    llm_response = send_prompt_to_api(prompt, diff)
+    prompt_info = prompt_dict["autocommit"]
+    llm_response = call_llm_model(prompt_info, diff)
     return llm_response["choices"][0]["message"]["content"]
 
 
