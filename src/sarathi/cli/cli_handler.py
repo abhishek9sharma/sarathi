@@ -1,5 +1,6 @@
 import argparse
 
+import sarathi.cli.qahelper as qahelper
 import sarathi.cli.sgit as sgit
 
 
@@ -9,6 +10,7 @@ def parse_cmd_args():
     subparsers = parser.add_subparsers(dest="op")
 
     sgit.setup_args(subparsers, opname="git")
+    qahelper.setup_args(subparsers, opname="ask")
 
     return parser.parse_args()
 
@@ -18,7 +20,9 @@ def main():
         parsed_args = parse_cmd_args()
         if parsed_args.op == "git":
             sgit.execute_cmd(parsed_args)
+        elif parsed_args.op == "ask":
+            qahelper.execute_cmd(parsed_args)
         else:
-            print("Unsupported Options")
+            print("Unsupported Option")
     except Exception as e:
         print(f"Exception {e} occured while trying to parse the argument")
