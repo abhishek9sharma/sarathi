@@ -3,7 +3,7 @@ import os
 import requests
 
 
-def call_llm_model(prompt_info, user_msg):
+def call_llm_model(prompt_info, user_msg, resp_type=None):
     try:
         url = "https://api.openai.com/v1/chat/completions"
         # url = "https://api.openai.com/v1/engines/davinci-codex/completions"
@@ -26,10 +26,13 @@ def call_llm_model(prompt_info, user_msg):
             "temperature": 0.7,
         }
         response = requests.post(url, headers=headers, json=body)
-        # print(response)
+        if resp_type == "text":
+            text_resp = response.json()["choices"][0]["message"]["content"]
+            return text_resp
         return response.json()
     except Exception as e:
         if str(e) == "'OPENAI_API_KEY'":
-            return {"Error": "Exception occured " + str(e) + " not found"}
+            raise ValueError("Exception occured " + str(e) + " not found")
+            # return {"Error": "Exception occured " + str(e) + " not found"}
 
-        return {"Error": "Exception occured " + str(e) + " occured"}
+        # return {"Error": "Exception occured " + str(e) + " occured"}
