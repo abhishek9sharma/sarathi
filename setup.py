@@ -23,7 +23,7 @@ setup(
     extras_require={},
     entry_points={
         "console_scripts": [
-            "sarathi=sarathi.cli.cli_handler:main",  #
+            "sarathi=src.sarathi.cli.cli_handler:main",  #
         ],
     },
     project_urls={

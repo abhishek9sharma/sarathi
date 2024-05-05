@@ -1,7 +1,7 @@
 import argparse
 
-import sarathi.cli.qahelper as qahelper
-import sarathi.cli.sgit as sgit
+import src.sarathi.cli.qahelper as qahelper
+import src.sarathi.cli.sgit as sgit
 
 
 def parse_cmd_args():

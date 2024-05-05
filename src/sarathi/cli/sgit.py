@@ -1,8 +1,8 @@
 import subprocess
 
-from sarathi.llm.call_llm import call_llm_model
-from sarathi.llm.prompts import prompt_dict
-from sarathi.utils.formatters import format_green
+from src.sarathi.llm.call_llm import call_llm_model
+from src.sarathi.llm.prompts import prompt_dict
+from src.sarathi.utils.formatters import format_green
 
 
 def get_staged_diff():
