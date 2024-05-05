@@ -72,7 +72,8 @@ class CodeTransformer:
         if op == "update_docstrings":
             methods = self.find_methods(tree)
             self.update_docstrings(methods)
-        return astor.to_source(tree)
+        modified_source = astor.to_source(tree)
+        self.update_code(modified_source)
 
     def update_code(self, updated_code):
         formatted_code = format_code(updated_code)

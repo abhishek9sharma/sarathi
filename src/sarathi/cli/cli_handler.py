@@ -1,5 +1,6 @@
 import argparse
 
+import src.sarathi.cli.gendocstrings as docstrgen
 import src.sarathi.cli.qahelper as qahelper
 import src.sarathi.cli.sgit as sgit
 
@@ -11,6 +12,7 @@ def parse_cmd_args():
 
     sgit.setup_args(subparsers, opname="git")
     qahelper.setup_args(subparsers, opname="ask")
+    docstrgen.setup_args(subparsers, opname="docstrgen")
 
     return parser.parse_args()
 
@@ -22,6 +24,8 @@ def main():
             sgit.execute_cmd(parsed_args)
         elif parsed_args.op == "ask":
             qahelper.execute_cmd(parsed_args)
+        elif parsed_args.op == "docstrgen":
+            docstrgen.execute_cmd(parsed_args)
         else:
             print("Unsupported Option")
     except Exception as e:
