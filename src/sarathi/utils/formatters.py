@@ -13,5 +13,14 @@ def format_green(text):
 
 
 def format_code(code):
+    """
+    Formats the input code using the specified mode.
+
+    Args:
+        code: The input code to be formatted.
+
+    Returns:
+        The formatted code.
+    """
     out = format_str(code, mode=FileMode())
     return out
