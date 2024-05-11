@@ -19,11 +19,11 @@ setup(
     packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     python_requires=">=3.7",
-    install_requires=["requests"],
+    install_requires=["requests", "astor", "black"],
     extras_require={},
     entry_points={
         "console_scripts": [
-            "sarathi=sarathi.cli.cli_handler:main",  #
+            "sarathi=src.sarathi.cli.cli_handler:main",  #
         ],
     },
     project_urls={
