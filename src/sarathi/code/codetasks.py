@@ -9,7 +9,6 @@ from src.sarathi.utils.formatters import format_code
 
 
 class CodeTransformer:
-
     def __init__(self, file_path):
         """Initializes the class with the provided file path.
 

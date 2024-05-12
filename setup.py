@@ -19,15 +19,15 @@ setup(
     packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     python_requires=">=3.7",
-    install_requires=["requests", "astor", "black"],
-    extras_require={},
+    install_requires=["requests==2.31.0", "astor==0.8.1", "black==24.4.2"],
+    extras_require={"dev": ["twine>=4.0.2","wheel"]},
     entry_points={
         "console_scripts": [
             "sarathi=src.sarathi.cli.cli_handler:main",  #
         ],
     },
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/sarathi/issues",
-        "Source": "https://github.com/yourusername/sarathi",
+        "Bug Reports": "https://github.com/abhishek9sharma/sarathi/issues",
+        "Source": "https://github.com/abhishek9sharma/sarathi",
     },
 )
