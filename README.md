@@ -3,11 +3,10 @@ A CLI coding assistant
 
 
 ## Installation
-You can install the package from the GitHub repository using pip. Make sure you have Python and pip installed on your system.
+You can install the package using below command. Make sure you have Python and pip installed on your system.
     
         - pip install sarathi
-        - pip install https://github.com/abhishek9sharma/sarathi.git
-
+ 
 ## Setting OpenAI API Key
 To use certain features of this package, you need to set up your OpenAI API key. If you don't have one, you can sign up for an account on the [OpenAI website](https://openai.com/product). Once you have your API key, you can set it in your environment variables. Here's how you can do it:
 
@@ -24,10 +23,10 @@ Sarathi provides a convenient command `sarathi git autocommit` to generate commi
 - Run `sarathi git autocommit`. This command will automatically analyze your staged changes (using git add .), generate a commit message, and if you confirm will commit your changes to the repository with the generate message
 
 #### Generating docstring messages
-You can generate docstrings for your python code using the below commands.
+You can generate docstrings for your python code using commands such as below
 
-- Run `sarathi docstrgen -f /scratchpad/ghmount/sarathi/src/sarathi/utils/formatters.py`. This command analyze the methods in the file passed and generates docstrings for functions if they do not exist.
-- Run `sarathi docstrgen -d /scratchpad/ghmount/sarathi/src/sarathi/`. This command analyzes the methods in all files presend in the directory specified and generates docstrings for functions if they do not exist.
+- Run `sarathi docstrgen -f src/sarathi/code/codetasks.py`. This command analyze the methods in the file passed and generates docstrings for functions if they do not exist.
+- Run `sarathi docstrgen -d src/sarathi/`. This command analyzes the methods in all files presend in the directory specified and generates docstrings for functions if they do not exist.
 
 
 ## Helpul references
