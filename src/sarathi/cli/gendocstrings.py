@@ -1,11 +1,10 @@
 import argparse
 import os
 
-from src.sarathi.code.codetasks import CodeTransformer
-from src.sarathi.llm.call_llm import call_llm_model
-from src.sarathi.llm.prompts import prompt_dict
-from src.sarathi.utils.io import (get_filepaths, is_valid_directory,
-                                  is_valid_file)
+from sarathi.code.codetasks import CodeTransformer
+from sarathi.llm.call_llm import call_llm_model
+from sarathi.llm.prompts import prompt_dict
+from sarathi.utils.io import get_filepaths, is_valid_directory, is_valid_file
 
 
 def setup_args(subparsers, opname):

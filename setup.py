@@ -2,7 +2,7 @@ from setuptools import find_namespace_packages, find_packages, setup
 
 setup(
     name="sarathi",
-    version="0.0.1",
+    version="0.0.2",
     description="A CLI coding assistant",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -19,15 +19,15 @@ setup(
     packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     python_requires=">=3.7",
-    install_requires=["requests", "astor", "black"],
-    extras_require={},
+    install_requires=["requests==2.31.0", "astor==0.8.1"],
+    extras_require={"dev": ["twine>=4.0.2", "wheel", "black"]},
     entry_points={
         "console_scripts": [
-            "sarathi=src.sarathi.cli.cli_handler:main",  #
+            "sarathi=sarathi.cli.cli_handler:main",  #
         ],
     },
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/sarathi/issues",
-        "Source": "https://github.com/yourusername/sarathi",
+        "Bug Reports": "https://github.com/abhishek9sharma/sarathi/issues",
+        "Source": "https://github.com/abhishek9sharma/sarathi",
     },
 )

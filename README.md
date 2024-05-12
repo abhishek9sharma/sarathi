@@ -5,6 +5,7 @@ A CLI coding assistant
 ## Installation
 You can install the package from the GitHub repository using pip. Make sure you have Python and pip installed on your system.
     
+        - pip install sarathi
         - pip install https://github.com/abhishek9sharma/sarathi.git
 
 ## Setting OpenAI API Key
@@ -26,7 +27,7 @@ Sarathi provides a convenient command `sarathi git autocommit` to generate commi
 You can generate docstrings for your python code using the below commands.
 
 - Run `sarathi docstrgen -f /scratchpad/ghmount/sarathi/src/sarathi/utils/formatters.py`. This command analyze the methods in the file passed and generates docstrings for functions if they do not exist.
-- Run `sarathi docstrgen -d /scratchpad/ghmount/sarathi/src/sarathi/`. This command analyze the methods in alls files presend in the directory specified and generates docstrings for functions if they do not exist.
+- Run `sarathi docstrgen -d /scratchpad/ghmount/sarathi/src/sarathi/`. This command analyzes the methods in all files presend in the directory specified and generates docstrings for functions if they do not exist.
 
 
 ## Helpul references
