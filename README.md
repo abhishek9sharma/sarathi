@@ -5,6 +5,7 @@ A CLI coding assistant
 ## Installation
 You can install the package from the GitHub repository using pip. Make sure you have Python and pip installed on your system.
     
+        - pip install sarathi
         - pip install https://github.com/abhishek9sharma/sarathi.git
 
 ## Setting OpenAI API Key
