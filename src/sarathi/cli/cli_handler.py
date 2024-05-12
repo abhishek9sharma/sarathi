@@ -1,8 +1,8 @@
 import argparse
 
-import src.sarathi.cli.gendocstrings as docstrgen
-import src.sarathi.cli.qahelper as qahelper
-import src.sarathi.cli.sgit as sgit
+import sarathi.cli.gendocstrings as docstrgen
+import sarathi.cli.qahelper as qahelper
+import sarathi.cli.sgit as sgit
 
 
 def parse_cmd_args():
