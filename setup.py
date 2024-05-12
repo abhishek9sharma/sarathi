@@ -2,7 +2,7 @@ from setuptools import find_namespace_packages, find_packages, setup
 
 setup(
     name="sarathi",
-    version="0.0.3a",
+    version="0.0.3",
     description="A CLI coding assistant",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
