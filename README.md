@@ -7,6 +7,11 @@ You can install the package using below command. Make sure you have Python and p
     
         - pip install sarathi
  
+
+## Quickstart
+
+[![sarathi](https://img.youtube.com/vi/0O6l02hfMnk/3.jpg)](https://www.youtube.com/watch?v=0O6l02hfMnk)
+
 ## Setting OpenAI API Key
 To use certain features of this package, you need to set up your OpenAI API key. If you don't have one, you can sign up for an account on the [OpenAI website](https://openai.com/product). Once you have your API key, you can set it in your environment variables. Here's how you can do it:
 
