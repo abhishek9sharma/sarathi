@@ -5,9 +5,8 @@ prompt_dict = {
                           - Think like a software developer
                           - Provide a high level description of changes
                           - Wrap lines at 72 characters
-                          - In case of multiple lines Add - in front of each line
+                          - In case of multiple lines add the character - in front of each line
                           - Provide High Level Description
-                          - User impertaive moodd in the subject line
                           - Use a maximum of 50 words
                           - Use standard English
                           - Try to be concise. Do not write multiple lines if not required
@@ -17,7 +16,7 @@ prompt_dict = {
     "qahelper": {
         "system_msg": """ 
                          Your task is to answer the below question to the best of your knowledge. Please follow below guidelines
-                          - Think like a principa software engineer who is assiting a junior developer
+                          - Think like a principal software engineer who is assiting a junior developer
                           - Do not give any nasty comments or answers.
                           - If you do not know the answer do not make it up, just say 'sorry I do not know answer to that question'
                       """,
@@ -25,7 +24,7 @@ prompt_dict = {
     },
     "update_docstrings": {
         "system_msg": """ 
-                         Your task is to generat Google style docstrings format for the python code provided below. Please follow below guidelines while generating the docstring
+                         Your task is to generate Google style docstrings format for the python code provided below. Please follow below guidelines while generating the docstring
                         -  docstrings should be generated in Google style docstrings format. An example is mentioned below
                                 \"\"\"Reads the content of a file.
 
