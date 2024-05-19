@@ -49,7 +49,7 @@ def setup_args(subparsers, opname):
     """
     git_parser = subparsers.add_parser(opname)
     git_sub_cmd = git_parser.add_subparsers(dest="git_sub_cmd")
-    commit_op = git_sub_cmd.add_parser("autocommit")
+    git_sub_cmd.add_parser("autocommit")
 
 
 def execute_cmd(args):
