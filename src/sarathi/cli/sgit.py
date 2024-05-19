@@ -28,15 +28,6 @@ def generate_commit_message():
     return llm_response["choices"][0]["message"]["content"]
 
 
-def get_user_confirmation():
-    """Prompts the user for confirmation to proceed.
-
-    Returns:
-        True if user input is y, False otherwise.
-    """
-    return input(f"Do you want to proceed " + format_green("y/n") + ": ").strip() == "y"
-
-
 def setup_args(subparsers, opname):
     """Adds a new sub-parser to the provided subparsers.
 
@@ -49,7 +40,7 @@ def setup_args(subparsers, opname):
     """
     git_parser = subparsers.add_parser(opname)
     git_sub_cmd = git_parser.add_subparsers(dest="git_sub_cmd")
-    commit_op = git_sub_cmd.add_parser("autocommit")
+    git_sub_cmd.add_parser("autocommit")
 
 
 def execute_cmd(args):
@@ -65,8 +56,5 @@ def execute_cmd(args):
     if args.git_sub_cmd == "autocommit":
         generated_commit_msg = generate_commit_message()
         if generated_commit_msg:
-            print(generated_commit_msg)
-            if get_user_confirmation():
-                subprocess.run(["git", "commit", "-m", generated_commit_msg])
-            else:
-                print("I would try to generate a better commit msgs next time")
+            subprocess.run(["git", "commit", "-m", generated_commit_msg])
+            subprocess.run(["git", "commit", "--amend"])
