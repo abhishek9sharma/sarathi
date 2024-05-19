@@ -10,6 +10,8 @@ prompt_dict = {
                           - Use a maximum of 50 words
                           - Use standard English
                           - Try to be concise. Do not write multiple lines if not required
+                          - If you think the diff fixes a comminbug, security issue or CVE which you know about, mention that in your response
+                          - Do not repeat instructions in commit message
                         """,
         "model": "gpt-3.5-turbo",
     },
