@@ -19,7 +19,7 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
         model = prompt_info["model"]
         system_msg = prompt_info["system_msg"]
         headers = {
-            "Authorization": "Bearer " + os.environ["OPENAI_API_KEY"],
+            "Authorization": "Bearer " + os.environ["SARATHI_OPENAI_API_KEY"],
             "Content-Type": "application/json",
         }
         body = {
