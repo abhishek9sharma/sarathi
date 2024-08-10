@@ -63,12 +63,12 @@ def execute_cmd(args):
     Returns:
         None
     """
-    if args.git_sub_cmd == "autocommit":
+    if args.git_sub_cmd == "gencommit":
         generated_commit_msg = generate_commit_message()
         if generated_commit_msg:
             subprocess.run(["git", "commit", "-m", generated_commit_msg])
             subprocess.run(["git", "commit", "--amend"])
-    elif args.git_sub_cmd == "gencommit":
+    elif args.git_sub_cmd == "autocommit":
         generated_commit_msg = generate_commit_message()
         if generated_commit_msg:
             print(generated_commit_msg)

@@ -37,7 +37,3 @@ def main():
             print("Unsupported Option")
     except Exception as e:
         print(f"Exception {e} occured while trying to parse the argument")
-
-
-if __name__ == "__main__":
-    main()
