@@ -67,7 +67,10 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
     """
     url = retrieve_llm_url()
     url = "https://api.openai.com/v1/chat/completions"
-    model = prompt_info["model"]
+    try:
+        model = prompt_info["model"]
+    except Exception as e:
+        model = retrieve_model_name()
     print(f"USING LLM : {url} and model :{model}")
     system_msg = prompt_info["system_msg"]
     headers = {
