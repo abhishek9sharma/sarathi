@@ -10,8 +10,6 @@ You can install the package using below command. Make sure you have Python and p
 
 ## Quickstart
 
-* Note that below video is still based on releae 0.0.3. Please read through below for updated commands.
-
 [![sarathi](https://img.youtube.com/vi/iBH_A6aZ4Qk/0.jpg)](https://youtu.be/iBH_A6aZ4Qk?si=_vJspgD5X33acR2i)
 
 
@@ -30,14 +28,14 @@ To use certain features of this package, you need to set up your OpenAI API key.
 #### Generating Git Commit Messages
 Sarathi provides a convenient commands to generate commit messages for git commits locally. Below are the steps you want to follow
 - Stage the files you want to commit
-- Run `sarathi git gencommit`.
+- Run `sarathi git autocommit`.
     - this command will automatically analyze your staged changes
     - generate a commit message via OPEN AI, show the generated message to you,
     - if you confirm, will commit your changes to the repository with the generated message.
 
-- Run `sarathi git autocommit`. 
-    - this command will automatically analyze your staged changes, 
-    - generate a commit message via OPEN AI, and commit the changes automatically. 
+- Run `sarathi git gencommit`.
+    - this command will automatically analyze your staged changes,
+    - generate a commit message via OPEN AI, and commit the changes automatically.
     - It will then run `git commit --amend` for you to edit the generated commit message.
 
 #### Generating docstring messages
