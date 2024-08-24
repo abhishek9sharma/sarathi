@@ -1,6 +1,6 @@
 import os
-
 import requests
+
 
 
 def get_env_var(var_names, default=None, error_msg=None):
@@ -44,7 +44,6 @@ def retrieve_llm_url():
         ["OPENAI_ENDPOINT_URL"], default="https://api.openai.com/v1/chat/completions"
     )
 
-
 def retrieve_model_name():
     """
     Retrieve the OpenAI model name from environment variables.
@@ -54,7 +53,7 @@ def retrieve_model_name():
     """
     return get_env_var(["OPENAI_MODEL_NAME"], default="gpt-4o-mini")
 
-
+  
 def call_llm_model(prompt_info, user_msg, resp_type=None):
     """
     Generate a response from the OpenAI language model based on the given prompt and user message.
@@ -67,7 +66,8 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
     Returns:
     """
     url = retrieve_llm_url()
-    model = retrieve_model_name()
+    url = "https://api.openai.com/v1/chat/completions"
+    model = prompt_info["model"]
     print(f"USING LLM : {url} and model :{model}")
     system_msg = prompt_info["system_msg"]
     headers = {
