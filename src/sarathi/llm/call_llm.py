@@ -50,9 +50,9 @@ def retrieve_model_name():
     Retrieve the OpenAI model name from environment variables.
 
     Returns:
-        str: The OpenAI model name. Defaults to 'gpt-3.5-turbo' if OPENAI_MODEL_NAME is not set.
+        str: The OpenAI model name. Defaults to 'gpt-4o-mini' if OPENAI_MODEL_NAME is not set.
     """
-    return get_env_var(["OPENAI_MODEL_NAME"], default="gpt-3.5-turbo")
+    return get_env_var(["OPENAI_MODEL_NAME"], default="gpt-4o-mini")
 
 
 def call_llm_model(prompt_info, user_msg, resp_type=None):
