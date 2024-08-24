@@ -1,68 +1,58 @@
 import os
+
 import requests
 
 
-def retrieve_api_key():
-    """Retrieves the OpenAI API key from environment variables.
+def get_env_var(var_names, default=None, error_msg=None):
+    """Generic function to retrieve environment variables."""
+    for name in var_names:
+        if name in os.environ:
+            return os.environ[name]
+    if default is not None:
+        print(
+            f"Environment variable(s) {var_names} not found. Using default: {default}"
+        )
+        return default
+    raise ValueError(error_msg or f"Environment variable(s) not found: {var_names}")
 
-    This function attempts to retrieve the API key from two possible environment variables:
-    SARATHI_OPENAI_API_KEY and OPENAI_API_KEY. If neither variable is set, it raises
-    a ValueError.
+
+def retrieve_api_key():
+    """
+    Retrieve the OpenAI API key from environment variables.
 
     Returns:
-        The OpenAI API key as a string.
+        str: The OpenAI API key.
 
     Raises:
-        ValueError: If neither environment variable is found.
+        ValueError: If neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found.
     """
-    try:
-        return os.environ["SARATHI_OPENAI_API_KEY"]
-    except Exception as e:
-        try:
-            return os.environ["OPENAI_API_KEY"]
-        except Exception as e:
-            raise ValueError(
-                "Exception occured: neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found"
-            )
+    return get_env_var(
+        ["SARATHI_OPENAI_API_KEY", "OPENAI_API_KEY"],
+        error_msg="Neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found",
+    )
+
 
 def retrieve_llm_url():
-    """Retrieves the LLM endpoint that is to be called
-
-    This function attempts to retrieve the API key from the end point OPEN_API_ENDPOINT_URL if specified
+    """
+    Retrieve the OpenAI API endpoint URL from environment variables.
 
     Returns:
-        The OPEN_API_ENDPOINT_URL 
-
-    Raises:
-        ValueError: If neither environment variable is found.
+        str: The OpenAI API endpoint URL. Defaults to 'https://api.openai.com/v1/chat/completions'
+             if OPENAI_ENDPOINT_URL is not set.
     """
-    try:
-        return os.environ["OPENAI_ENDPOINT_URL"]
-    except Exception as e:
-        try:
-            default_OPENAI_ENDPOINT_URL = "https://api.openai.com/v1/chat/completions"
-            print(f"OPENAI_ENDPOINT_URL env var not found using default URL : {default_OPENAI_ENDPOINT_URL} ")
-            return default_OPENAI_ENDPOINT_URL
-        except Exception as e:
-            raise ValueError(
-                "Exception occured: OPEN_API_ENDPOINT_URL  not found"
-            )
+    return get_env_var(
+        ["OPENAI_ENDPOINT_URL"], default="https://api.openai.com/v1/chat/completions"
+    )
+
 
 def retrieve_model_name():
-    """Retrieves the LLM model name to be used
-
-    This function attempts to retrieve the model name from the environment variable OPENAI_MODEL_NAME.
-    If not found, it uses a default model name.
+    """
+    Retrieve the OpenAI model name from environment variables.
 
     Returns:
-        The OpenAI model name as a string.
+        str: The OpenAI model name. Defaults to 'gpt-3.5-turbo' if OPENAI_MODEL_NAME is not set.
     """
-    try:
-        return os.environ["OPENAI_MODEL_NAME"]
-    except KeyError:
-        default_model_name = "gpt-3.5-turbo"
-        print(f"OPENAI_MODEL_NAME env var not found, using default model: {default_model_name}")
-        return default_model_name
+    return get_env_var(["OPENAI_MODEL_NAME"], default="gpt-3.5-turbo")
 
 
 def call_llm_model(prompt_info, user_msg, resp_type=None):
@@ -78,6 +68,7 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
     """
     url = retrieve_llm_url()
     model = retrieve_model_name()
+    print(f"USING LLM : {url} and model :{model}")
     system_msg = prompt_info["system_msg"]
     headers = {
         "Authorization": "Bearer " + retrieve_api_key(),
@@ -95,7 +86,6 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
         "temperature": 0.7,
     }
     response = requests.post(url, headers=headers, json=body)
-    print(response.text)
     if resp_type == "text":
         text_resp = response.json()["choices"][0]["message"]["content"]
         return text_resp
