@@ -10,8 +10,8 @@ format:
 	@echo "Formatting Python code..."
 	pip3 install black
 	pip3 install isort
-	#black src
-	#isort src
+	black src
+	isort src
 	@black $(PYTHON_FILES)
 	@isort $(PYTHON_FILES)
 	@echo "Done!"

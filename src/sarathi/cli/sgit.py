@@ -71,6 +71,7 @@ def execute_cmd(args):
     elif args.git_sub_cmd == "autocommit":
         generated_commit_msg = generate_commit_message()
         if generated_commit_msg:
+            print("**Below is the generated commit message **\n")
             print(generated_commit_msg)
             if get_user_confirmation():
                 subprocess.run(["git", "commit", "-m", generated_commit_msg])
