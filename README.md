@@ -1,5 +1,5 @@
 # sarathi
-A CLI coding assistant
+A CLI coding assistant. It is targeted towards mundane tasks such as writing commit messages, generating docstrings etc.
 
 
 ## Installation
@@ -15,12 +15,24 @@ You can install the package using below command. Make sure you have Python and p
 
 
 
-## Setting OpenAI API Key
-To use certain features of this package, you need to set up your OpenAI API key. If you don't have one, you can sign up for an account on the [OpenAI website](https://openai.com/product). Once you have your API key, you can set it in your environment variables. Here's how you can do it:
+## Setting some Environment Variables
 
-### For Linux/macOS:
+-  To use this package, you need to set up some environment variables. The steps are mentioned below. 
 
-    - export SARATHI_OPENAI_API_KEY=<token>
+    - The default setting of the package is to use [OpenAI](https://openai.com/) services which requires an API key. To get the key, you need to sign up for an account on the [OpenAI website](https://openai.com/product). Once you have your API key, you can set it in your environment variables as mentioned below
+       
+            export OPENAI_API_KEY=keyvalue
+
+    - In case you do not want to use [OpenAI](https://openai.com/) services, this package should work with any endpoint which accepts requests in OpenAI schema format. For example you can use it local LLM model endpoints like [Ollama](https://ollama.com/) by setting below environment variables
+            
+            export OPENAI_API_KEY=ollama
+            export OPENAI_ENDPOINT_URL=http://localhost:11434/v1/chat/completions
+            export OPENAI_MODEL_NAME=codellama:7b
+
+
+ 
+
+ 
 
 
 ## Usage

@@ -10,9 +10,6 @@ def get_env_var(var_names, default=None, error_msg=None):
         if name in os.environ:
             return os.environ[name]
     if default is not None:
-        print(
-            f"Environment variable(s) {var_names} not found. Using default: {default}"
-        )
         return default
     raise ValueError(error_msg or f"Environment variable(s) not found: {var_names}")
 
@@ -55,12 +52,13 @@ def retrieve_model_name(prompt_info):
 
     Returns:
         str: The OpenAI model name. Defaults to 'gpt-4o-mini' if OPENAI_MODEL_NAME is not set.
+        dict: updated prompt_info
     """
 
-    if "model" in prompt_info:
-        return prompt_info["model"]
-    else:
-        return get_env_var(["OPENAI_MODEL_NAME"], default="gpt-4o-mini")
+    model_name = get_env_var(["OPENAI_MODEL_NAME"], default="gpt-4o-mini")
+    if prompt_info["model"] != model_name:
+        prompt_info["model"] = model_name
+    return model_name, prompt_info
 
 
 def call_llm_model(prompt_info, user_msg, resp_type=None):
@@ -76,16 +74,15 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
     """
 
     url = retrieve_llm_url()
-    url = "https://api.openai.com/v1/chat/completions"
-    model = retrieve_model_name(prompt_info)
-    print(f"USING LLM : {url} and model :{model}")
+    model_name, prompt_info = retrieve_model_name(prompt_info)
+    print(f"USING LLM : {url} and model :{model_name}")
     system_msg = prompt_info["system_msg"]
     headers = {
         "Authorization": "Bearer " + retrieve_api_key(),
         "Content-Type": "application/json",
     }
     body = {
-        "model": model,
+        "model": model_name,
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
