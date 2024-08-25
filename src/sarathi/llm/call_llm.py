@@ -54,11 +54,13 @@ def retrieve_model_name(prompt_info):
         str: The OpenAI model name. Defaults to 'gpt-4o-mini' if OPENAI_MODEL_NAME is not set.
         dict: updated prompt_info
     """
-
-    model_name = get_env_var(["OPENAI_MODEL_NAME"], default="gpt-4o-mini")
+    model_name = get_env_var(
+        ["OPENAI_MODEL_NAME"],
+        default=(prompt_info["model"] if prompt_info["model"] else "gpt-4o-mini"),
+    )
     if prompt_info["model"] != model_name:
         prompt_info["model"] = model_name
-    return model_name, prompt_info
+    return model_name
 
 
 def call_llm_model(prompt_info, user_msg, resp_type=None):
@@ -74,7 +76,7 @@ def call_llm_model(prompt_info, user_msg, resp_type=None):
     """
 
     url = retrieve_llm_url()
-    model_name, prompt_info = retrieve_model_name(prompt_info)
+    model_name = retrieve_model_name(prompt_info)
     print(f"USING LLM : {url} and model :{model_name}")
     system_msg = prompt_info["system_msg"]
     headers = {
