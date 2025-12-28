@@ -2,7 +2,7 @@ from setuptools import find_namespace_packages, find_packages, setup
 
 setup(
     name="sarathi",
-    version="0.0.4b",
+    version="0.0.4c",
     description="A CLI coding assistant",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -19,7 +19,7 @@ setup(
     packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     python_requires=">=3.7",
-    install_requires=["requests", "astor", "black"],
+    install_requires=["requests", "astor", "black", "PyYAML"],
     extras_require={
         "dev": [
             "twine>=4.0.2",

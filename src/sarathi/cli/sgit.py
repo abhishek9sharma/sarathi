@@ -24,7 +24,7 @@ def generate_commit_message():
     """
     diff = get_staged_diff()
     prompt_info = prompt_dict["autocommit"]
-    llm_response = call_llm_model(prompt_info, diff)
+    llm_response = call_llm_model(prompt_info, diff, agent_name="commit_generator")
     return llm_response["choices"][0]["message"]["content"]
 
 
@@ -76,4 +76,4 @@ def execute_cmd(args):
             if get_user_confirmation():
                 subprocess.run(["git", "commit", "-m", generated_commit_msg])
             else:
-                print("I would try to generate a better commit msgs next time")
+                print("I would try to generate better commit msgs next time")

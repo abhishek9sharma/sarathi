@@ -1,101 +1,100 @@
-import os
-
 import requests
+from sarathi.config.config_manager import config
 
+def get_agent_config(agent_name):
+    """Retrieves the configuration for a specific agent."""
+    if not agent_name:
+        return {}
+    
+    # Map legacy prompt keys to new agent names if needed
+    # (assuming prompt_info keys passed might be 'autocommit')
+    if agent_name == "autocommit":
+        agent_name = "commit_generator"
+        
+    return config.get_agent_config(agent_name)
 
-def get_env_var(var_names, default=None, error_msg=None):
-    """Generic function to retrieve environment variables."""
-
-    for name in var_names:
-        if name in os.environ:
-            return os.environ[name]
-    if default is not None:
-        return default
-    raise ValueError(error_msg or f"Environment variable(s) not found: {var_names}")
-
-
-def retrieve_api_key():
+def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     """
-    Retrieve the OpenAI API key from environment variables.
-
-    Returns:
-        str: The OpenAI API key.
-
-    Raises:
-        ValueError: If neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found.
-    """
-
-    return get_env_var(
-        ["SARATHI_OPENAI_API_KEY", "OPENAI_API_KEY"],
-        error_msg="Neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found",
-    )
-
-
-def retrieve_llm_url():
-    """
-    Retrieve the OpenAI API endpoint URL from environment variables.
-
-    Returns:
-        str: The OpenAI API endpoint URL. Defaults to 'https://api.openai.com/v1/chat/completions'
-             if OPENAI_ENDPOINT_URL is not set.
-    """
-
-    return get_env_var(
-        ["OPENAI_ENDPOINT_URL"], default="https://api.openai.com/v1/chat/completions"
-    )
-
-
-def retrieve_model_name(prompt_info):
-    """
-    Retrieve the OpenAI model name from environment variables.
-        prompt_info (dict): A dictionary containing information about the prompt, including the model and system message.
-
-    Returns:
-        str: The OpenAI model name. Defaults to 'gpt-4o-mini' if OPENAI_MODEL_NAME is not set.
-        dict: updated prompt_info
-    """
-    model_name = get_env_var(
-        ["OPENAI_MODEL_NAME"],
-        default=(prompt_info["model"] if prompt_info["model"] else "gpt-4o-mini"),
-    )
-    if prompt_info["model"] != model_name:
-        prompt_info["model"] = model_name
-    return model_name
-
-
-def call_llm_model(prompt_info, user_msg, resp_type=None):
-    """
-    Generate a response from the OpenAI language model based on the given prompt and user message.
-
+    Generate a response from the configured LLM.
+    
     Args:
-        prompt_info (dict): A dictionary containing information about the prompt, including the model and system message.
-        user_msg (str): The user message to be used as input for the language model.
-        resp_type (str, optional): The type of response expected. Defaults to None.
-
-    Returns:
+        prompt_info (dict): Legacy prompt dict containing system_msg and default model.
+        user_msg (str): The user input.
+        resp_type (str): 'text' to return just string, else json.
+        agent_name (str): The name of the agent (e.g. 'commit_generator').
     """
+    
+    # 1. Determine Agent Config
+    agent_conf = get_agent_config(agent_name)
+    
+    # 2. Determine Attributes (Config > Prompt Info Default)
+    # Model
+    model_name = agent_conf.get("model") or prompt_info.get("model") or "gpt-4o-mini"
+    
+    # Provider (e.g. openai, ollama)
+    provider_name = agent_conf.get("provider", "openai")
+    provider_conf = config.get_provider_config(provider_name)
+    
+    # System Prompt (Config Override > Prompt Info)
+    system_msg = agent_conf.get("system_prompt") 
+    if not system_msg:
+        system_msg = prompt_info.get("system_msg", "")
 
-    url = retrieve_llm_url()
-    model_name = retrieve_model_name(prompt_info)
-    print(f"USING LLM : {url} and model :{model_name}")
-    system_msg = prompt_info["system_msg"]
+    # 3. Construct URL and Headers
+    base_url = provider_conf.get("base_url")
+    if not base_url:
+        # Fallback defaults if config is empty for some reason
+        if provider_name == "openai":
+            base_url = "https://api.openai.com/v1"
+        elif provider_name == "ollama":
+            base_url = "http://localhost:11434"
+    
+    # Handle OpenAI vs Ollama URL quirks
+    # OpenAI usually expects /v1/chat/completions appended if base is just root
+    # But usually config has full path or we standardizing on base_url being the root?
+    # The config_manager default says: "https://api.openai.com/v1"
+    # So we append "/chat/completions"
+    url = f"{base_url.rstrip('/')}/chat/completions"
+
+    api_key = provider_conf.get("api_key")
+    
     headers = {
-        "Authorization": "Bearer " + retrieve_api_key(),
         "Content-Type": "application/json",
     }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    print(f"USING LLM : {provider_name} | Model: {model_name} | URL: {url}")
+
+    # 4. Construct Body
     body = {
         "model": model_name,
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
         ],
-        "max_tokens": 100,
+        # TODO: Make these configurable too
+        "max_tokens": 300, 
         "n": 1,
-        "stop": None,
-        "temperature": 0.7,
+        "temperature": agent_conf.get("temperature", 0.7),
     }
-    response = requests.post(url, headers=headers, json=body)
-    if resp_type == "text":
-        text_resp = response.json()["choices"][0]["message"]["content"]
-        return text_resp
-    return response.json()
+
+    response = None
+    try:
+        response = requests.post(url, headers=headers, json=body, timeout=config.get("core.timeout", 30))
+        response.raise_for_status()
+        
+        if resp_type == "text":
+            return response.json()["choices"][0]["message"]["content"]
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling LLM: {e}")
+        if response is not None:
+             # Try to print body if available, but it might not be text
+             try:
+                 print(f"Response: {response.text}")
+             except:
+                 pass
+        return {"Error": f"LLM Call Failed: {e}"}
+

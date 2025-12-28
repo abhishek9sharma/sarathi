@@ -1,0 +1,21 @@
+agents:
+  commit_generator:
+    model: gpt-4o-mini
+    provider: openai
+    system_prompt: null
+    temperature: 0.7
+  qahelper:
+    model: gpt-4o-mini
+    provider: openai
+  update_docstrings:
+    model: gpt-4o-mini
+    provider: openai
+core:
+  provider: openai
+  timeout: 30
+providers:
+  ollama:
+    base_url: http://localhost:11434
+    model: llama3
+  openai:
+    base_url: https://api.openai.com/v1
