@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 test.py
 .env
+launch.json
+.DS_Store/

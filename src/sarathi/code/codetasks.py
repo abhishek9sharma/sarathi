@@ -86,6 +86,7 @@ class CodeTransformer:
                             prompt_info=prompt_dict[self.dosctring_prompt],
                             user_msg=existing_method_code,
                             resp_type="text",
+                            agent_name=self.dosctring_prompt,
                         )
                         new_docstring_node = self.format_node_with_new_docstring(
                             new_docstring, method
@@ -98,6 +99,7 @@ class CodeTransformer:
                         prompt_info=prompt_dict[self.dosctring_prompt],
                         user_msg=existing_method_code,
                         resp_type="text",
+                        agent_name=self.dosctring_prompt,
                     )
                     if new_docstring is not None:
                         new_docstring_node = self.format_node_with_new_docstring(

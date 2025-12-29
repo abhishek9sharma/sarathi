@@ -1,39 +1,65 @@
 import argparse
+import importlib
+import sys
 
-import sarathi.cli.gendocstrings as docstrgen
-import sarathi.cli.qahelper as qahelper
-import sarathi.cli.sgit as sgit
+from sarathi.cli.registry import CLI_REGISTRY
+from sarathi.utils.io import is_valid_directory, is_valid_file
+
+# Map string type names to actual functions if needed
+TYPE_MAP = {
+    "is_valid_file": lambda parser, x: is_valid_file(parser, x),
+    "is_valid_directory": lambda parser, x: is_valid_directory(parser, x),
+}
+
+
+def resolve_type(type_name, parser):
+    """Resolves a string type name to a callable, passing parser if needed."""
+    if isinstance(type_name, str) and type_name in TYPE_MAP:
+        return lambda x: TYPE_MAP[type_name](parser, x)
+    return type_name
 
 
 def parse_cmd_args():
-    """This function parses command line arguments using argparse.
-
-    Returns:
-        argparse.Namespace: The parsed arguments from the command line."""
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Sarathi - AI Coding Assistant")
     subparsers = parser.add_subparsers(dest="op")
-    sgit.setup_args(subparsers, opname="git")
-    qahelper.setup_args(subparsers, opname="ask")
-    docstrgen.setup_args(subparsers, opname="docstrgen")
+
+    for cmd_name, config in CLI_REGISTRY.items():
+        # Dynamic Import
+        module = importlib.import_module(config["module"])
+
+        if config.get("custom_setup"):
+            # Let the module handle subparser creation entirely
+            if hasattr(module, "setup_args"):
+                module.setup_args(subparsers, opname=cmd_name)
+        else:
+            # Create parser for simple commands
+            cmd_parser = subparsers.add_parser(cmd_name, help=config.get("help"))
+
+            for arg_def in config.get("args", []):
+                flags = arg_def["flags"]
+                kwargs = arg_def["kwargs"].copy()
+                if "type" in kwargs:
+                    kwargs["type"] = resolve_type(kwargs["type"], cmd_parser)
+                cmd_parser.add_argument(*flags, **kwargs)
+
     return parser.parse_args()
 
 
 def main():
-    """This function is the entry point of the program.
-    It parses the command line arguments and executes the corresponding command based on the value of op attribute in the parsed arguments.
-    - If the op is git, it executes a git command.
-    - If the op is ask, it executes a command related to question-answering.
-    - If the op is docstrgen, it executes a command related to generating docstrings.
-    """
     try:
         parsed_args = parse_cmd_args()
-        if parsed_args.op == "git":
-            sgit.execute_cmd(parsed_args)
-        elif parsed_args.op == "ask":
-            qahelper.execute_cmd(parsed_args)
-        elif parsed_args.op == "docstrgen":
-            docstrgen.execute_cmd(parsed_args)
+
+        if not parsed_args.op:
+            print("No command specified. Use --help to see available commands.")
+            return
+
+        if parsed_args.op in CLI_REGISTRY:
+            conf = CLI_REGISTRY[parsed_args.op]
+            module = importlib.import_module(conf["module"])
+            handler = getattr(module, conf["handler"])
+            handler(parsed_args)
         else:
-            print("Unsupported Option")
+            print(f"Unknown command: {parsed_args.op}")
+
     except Exception as e:
-        print(f"Exception {e} occured while trying to parse the argument")
+        print(f"An unexpected error occurred: {e}")
