@@ -1,42 +1,38 @@
 import os
-import yaml
 from pathlib import Path
 
+import yaml
+
 DEFAULT_CONFIG = {
-    "core": {
-        "provider": "openai",
-        "timeout": 30
-    },
+    "core": {"provider": "openai", "timeout": 30},
     "providers": {
-        "openai": {
-            "base_url": "https://api.openai.com/v1"
-        },
-        "ollama": {
-            "base_url": "http://localhost:11434",
-            "model": "llama3"
-        }
+        "openai": {"base_url": "https://api.openai.com/v1"},
+        "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},
     },
     "agents": {
         "commit_generator": {
             "provider": "openai",
             "model": "gpt-4o-mini",
             "temperature": 0.7,
-            "system_prompt": None 
+            "system_prompt": None,
         },
         "qahelper": {
-             "provider": "openai",
-             "model": "gpt-4o-mini",
+            "provider": "openai",
+            "model": "gpt-4o-mini",
         },
         "update_docstrings": {
-             "provider": "openai",
-             "model": "gpt-4o-mini",
-        }
-    }
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+        },
+    },
 }
+
+
+import copy
 
 class ConfigManager:
     def __init__(self):
-        self._config = DEFAULT_CONFIG.copy()
+        self._config = copy.deepcopy(DEFAULT_CONFIG)
         self.load_configs()
 
     def load_configs(self):
@@ -55,7 +51,7 @@ class ConfigManager:
 
     def _merge_from_file(self, path):
         try:
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 data = yaml.safe_load(f)
                 if data:
                     # Security: Enforce that api_key cannot be loaded from yaml
@@ -63,8 +59,10 @@ class ConfigManager:
                         for provider in data["providers"].values():
                             if "api_key" in provider:
                                 provider.pop("api_key", None)
-                                print("Warning: 'api_key' in configuration file is ignored for security. Use environment variables.")
-                    
+                                print(
+                                    "Warning: 'api_key' in configuration file is ignored for security. Use environment variables."
+                                )
+
                     self._deep_merge(self._config, data)
         except Exception as e:
             print(f"Warning: Failed to load config from {path}: {e}")
@@ -80,24 +78,26 @@ class ConfigManager:
         # Allow legacy env vars to override the active provider config
         api_key = os.getenv("SARATHI_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
         if api_key:
-            # We don't know which provider they mean if they just set OPENAI_API_KEY, 
-            # but historically it meant OpenAI. 
+            # We don't know which provider they mean if they just set OPENAI_API_KEY,
+            # but historically it meant OpenAI.
             self._config["providers"]["openai"]["api_key"] = api_key
 
         endpoint = os.getenv("OPENAI_ENDPOINT_URL")
         if endpoint:
-             self._config["providers"]["openai"]["base_url"] = endpoint.rstrip("/chat/completions")
+            self._config["providers"]["openai"]["base_url"] = endpoint.rstrip(
+                "/chat/completions"
+            )
 
         model = os.getenv("OPENAI_MODEL_NAME")
         if model:
-             # This is tricky as we don't know which agent checking the env var was meant for.
-             # In legacy sarathi, it applied to everything.
-             self._config["agents"]["commit_generator"]["model"] = model
-             self._config["agents"]["qahelper"]["model"] = model
+            # This is tricky as we don't know which agent checking the env var was meant for.
+            # In legacy sarathi, it applied to everything.
+            self._config["agents"]["commit_generator"]["model"] = model
+            self._config["agents"]["qahelper"]["model"] = model
 
     def get(self, key_path, default=None):
         """Get a value using dot notation e.g. 'agents.commit_generator.model'"""
-        keys = key_path.split('.')
+        keys = key_path.split(".")
         curr = self._config
         for k in keys:
             if isinstance(curr, dict) and k in curr:
@@ -111,6 +111,7 @@ class ConfigManager:
 
     def get_provider_config(self, provider_name):
         return self._config.get("providers", {}).get(provider_name, {})
+
 
 # Singleton instance
 config = ConfigManager()

@@ -7,9 +7,6 @@ from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.io import get_filepaths, is_valid_directory, is_valid_file
 
 
-
-
-
 def execute_cmd(args):
     """
     Execute a command based on the provided arguments.

@@ -1,14 +1,16 @@
 import argparse
 import importlib
 import sys
+
 from sarathi.cli.registry import CLI_REGISTRY
 from sarathi.utils.io import is_valid_directory, is_valid_file
 
 # Map string type names to actual functions if needed
 TYPE_MAP = {
     "is_valid_file": lambda parser, x: is_valid_file(parser, x),
-    "is_valid_directory": lambda parser, x: is_valid_directory(parser, x)
+    "is_valid_directory": lambda parser, x: is_valid_directory(parser, x),
 }
+
 
 def resolve_type(type_name, parser):
     """Resolves a string type name to a callable, passing parser if needed."""
@@ -16,14 +18,15 @@ def resolve_type(type_name, parser):
         return lambda x: TYPE_MAP[type_name](parser, x)
     return type_name
 
+
 def parse_cmd_args():
     parser = argparse.ArgumentParser(description="Sarathi - AI Coding Assistant")
     subparsers = parser.add_subparsers(dest="op")
-    
+
     for cmd_name, config in CLI_REGISTRY.items():
         # Dynamic Import
         module = importlib.import_module(config["module"])
-        
+
         if config.get("custom_setup"):
             # Let the module handle subparser creation entirely
             if hasattr(module, "setup_args"):
@@ -31,21 +34,21 @@ def parse_cmd_args():
         else:
             # Create parser for simple commands
             cmd_parser = subparsers.add_parser(cmd_name, help=config.get("help"))
-            
+
             for arg_def in config.get("args", []):
                 flags = arg_def["flags"]
                 kwargs = arg_def["kwargs"].copy()
                 if "type" in kwargs:
-                     kwargs["type"] = resolve_type(kwargs["type"], cmd_parser)
+                    kwargs["type"] = resolve_type(kwargs["type"], cmd_parser)
                 cmd_parser.add_argument(*flags, **kwargs)
-                
+
     return parser.parse_args()
 
 
 def main():
     try:
         parsed_args = parse_cmd_args()
-        
+
         if not parsed_args.op:
             print("No command specified. Use --help to see available commands.")
             return
@@ -57,6 +60,6 @@ def main():
             handler(parsed_args)
         else:
             print(f"Unknown command: {parsed_args.op}")
-            
+
     except Exception as e:
         print(f"An unexpected error occurred: {e}")

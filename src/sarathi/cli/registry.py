@@ -18,9 +18,9 @@ CLI_REGISTRY = {
         "module": "sarathi.cli.sgit",
         "handler": "execute_cmd",
         # Git uses its own internal subparser logic for now which is complex
-        # So we keep using its setup_args for the specific arguments, 
+        # So we keep using its setup_args for the specific arguments,
         # but we route it dynamically.
-        "custom_setup": True 
+        "custom_setup": True,
     },
     "ask": {
         "help": "Ask the AI a question",
@@ -29,9 +29,9 @@ CLI_REGISTRY = {
         "args": [
             {
                 "flags": ["-q", "--question"],
-                "kwargs": {"required": True, "help": "The question to ask"}
+                "kwargs": {"required": True, "help": "The question to ask"},
             }
-        ]
+        ],
     },
     "docstrgen": {
         "help": "Generate Python docstrings",
@@ -43,23 +43,23 @@ CLI_REGISTRY = {
                 "kwargs": {
                     "required": False,
                     "help": "Path to a specific file",
-                    "type": "is_valid_file" # Special string we'll map to function
-                }
+                    "type": "is_valid_file",  # Special string we'll map to function
+                },
             },
             {
                 "flags": ["-d", "--dirpath"],
                 "kwargs": {
                     "required": False,
                     "help": "Path to a directory",
-                    "type": "is_valid_directory"
-                }
-            }
-        ]
+                    "type": "is_valid_directory",
+                },
+            },
+        ],
     },
     "config": {
         "help": "Manage configuration",
         "module": "sarathi.cli.config_cli",
         "handler": "execute_cmd",
-        "custom_setup": True # Config has subcommands (init, show)
-    }
+        "custom_setup": True,  # Config has subcommands (init, show)
+    },
 }
