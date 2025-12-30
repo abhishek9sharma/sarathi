@@ -1,10 +1,17 @@
 import json
+import time
 from sarathi.llm.call_llm import call_llm_model
 from sarathi.llm.tools import registry
 
 class AgentEngine:
     def __init__(self, agent_name, system_prompt=None, tools=None):
+        from sarathi.config.config_manager import config
         self.agent_name = agent_name
+        
+        # If no explicit system_prompt provided, try loading from config
+        if system_prompt is None:
+            system_prompt = config.get(f"prompts.{agent_name}")
+            
         self.system_prompt = system_prompt
         self.tools = tools or []
         self.messages = []
@@ -53,7 +60,6 @@ class AgentEngine:
         from sarathi.config.config_manager import config
         from sarathi.utils.usage import usage_tracker
         import requests
-        import time
 
         agent_conf = get_agent_config(self.agent_name)
         provider_name = agent_conf.get("provider", "openai")

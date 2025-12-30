@@ -1,7 +1,5 @@
 import subprocess
 
-from sarathi.llm.call_llm import call_llm_model
-from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.formatters import format_green
 
 

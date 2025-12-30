@@ -40,8 +40,10 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     provider_name = agent_conf.get("provider", "openai")
     provider_conf = config.get_provider_config(provider_name)
 
-    # System Prompt (Config Override > Prompt Info)
+    # System Prompt (Agent Config > Prompts Section > Prompt Info Legacy)
     system_msg = agent_conf.get("system_prompt")
+    if not system_msg:
+        system_msg = config.get(f"prompts.{agent_name}")
     if not system_msg:
         system_msg = prompt_info.get("system_msg", "")
 

@@ -1,10 +1,5 @@
-"""
-Code editing agent for generating tests and modifying code.
-
-Uses the AgentEngine with specialized tools for code analysis and modification.
-"""
 from sarathi.llm.agent_engine import AgentEngine
-from sarathi.llm.prompts import prompt_dict
+from sarathi.config.config_manager import config
 
 
 class CodeEditAgent:
@@ -25,31 +20,13 @@ class CodeEditAgent:
         Returns:
             Path to the generated test file or error message.
         """
-        system_prompt = f"""You are an expert Python developer specializing in writing comprehensive unit tests.
-
+        # Load prompt from config
+        default_prompt = """You are an expert Python developer specializing in writing comprehensive unit tests.
 Your task is to generate tests for Python code using {test_framework}.
-
-Follow these steps:
-1. Use `read_file` to read the source code
-2. Use `parse_python_ast` to understand the code structure
-3. Use `check_test_exists` to see if tests already exist
-4. Generate comprehensive test cases covering:
-   - Normal cases
-   - Edge cases
-   - Error handling
-   - Different input types
-5. Use `write_file` to create the test file
-6. Use `run_pytest` to verify the tests run
-
-Guidelines:
-- Write clear, descriptive test names
-- Use fixtures when appropriate
-- Mock external dependencies
-- Aim for high code coverage
-- Include docstrings in test functions
-- Follow PEP 8 style guidelines
-
 Return the path to the generated test file when complete."""
+        
+        system_prompt_template = config.get("prompts.generate_tests", default_prompt)
+        system_prompt = system_prompt_template.format(test_framework=test_framework)
 
         tools = [
             "read_file",
@@ -86,32 +63,11 @@ Return the path to the generated test file when complete."""
         Returns:
             Agent's response describing what was done.
         """
-        system_prompt = """You are an expert Python developer and code editor.
-
-You can help with:
-- Generating new code
-- Refactoring existing code
-- Adding features
-- Fixing bugs
-- Generating tests
-- Adding documentation
-
-Available tools:
-- File operations: read_file, write_file, list_files, find_python_files
-- Code analysis: parse_python_ast, get_function_code
-- Git operations: get_git_diff, get_git_status
-- Testing: run_pytest, check_test_exists
-- Command execution: run_command
-- Project structure: get_project_structure
-
-Always:
-1. Understand the request fully
-2. Read relevant files to understand context
-3. Make changes carefully
-4. Verify changes work (run tests if applicable)
-5. Explain what you did
-
-Be thorough but concise in your explanations."""
+        # Load prompt from config
+        default_prompt = """You are an expert Python developer and code editor.
+Explain what you did after making changes."""
+        
+        system_prompt = config.get("prompts.edit_code", default_prompt)
 
         tools = [
             "read_file",

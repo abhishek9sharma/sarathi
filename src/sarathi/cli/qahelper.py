@@ -1,5 +1,4 @@
 from sarathi.llm.agent_engine import AgentEngine
-from sarathi.llm.prompts import prompt_dict
 from sarathi.llm.tool_library import registry # Ensure tools are registered
 
 def execute_cmd(args):
@@ -16,7 +15,6 @@ def execute_cmd(args):
     # Initialize Agent with tools
     agent = AgentEngine(
         agent_name="qahelper",
-        system_prompt=prompt_dict["qahelper"]["system_msg"],
         tools=list(registry.tools.keys())
     )
     

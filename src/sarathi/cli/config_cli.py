@@ -7,7 +7,6 @@ from pathlib import Path
 import yaml
 
 from sarathi.config.config_manager import DEFAULT_CONFIG, config
-from sarathi.llm.prompts import prompt_dict
 
 
 def setup_args(subparsers, opname="config"):
@@ -49,20 +48,6 @@ def create_config(custom_path=None):
 
     # Create an expanded config with prompts for the user file
     full_config = copy.deepcopy(DEFAULT_CONFIG)
-
-    # Map agent names to keys in prompt_dict
-    prompt_map = {
-        "commit_generator": "autocommit",
-        "qahelper": "qahelper",
-        "update_docstrings": "update_docstrings",
-    }
-
-    for agent_name, prompt_key in prompt_map.items():
-        if agent_name in full_config.get("agents", {}):
-            if prompt_key in prompt_dict:
-                raw_prompt = prompt_dict[prompt_key]["system_msg"]
-                # Clean up the prompt formatting so it looks nice in YAML
-                full_config["agents"][agent_name]["system_prompt"] = textwrap.dedent(raw_prompt).strip()
 
     # Security: Ensure we don't dump None-keys that we removed
     if "providers" in full_config:

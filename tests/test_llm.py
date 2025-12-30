@@ -10,7 +10,9 @@ def mock_config():
         # Default behavior
         mock.get_agent_config.return_value = {}
         mock.get_provider_config.return_value = {"base_url": "https://api.openai.com/v1", "api_key": "test_key"}
-        mock.get.return_value = 30 # Timeout
+        
+        # Make .get() return 30 for timeout, but None for others (like prompts)
+        mock.get.side_effect = lambda key, default=None: 30 if key == "core.timeout" else default
         yield mock
 
 def test_get_agent_config(mock_config):

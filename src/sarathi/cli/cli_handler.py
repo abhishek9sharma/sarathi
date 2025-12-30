@@ -66,13 +66,14 @@ def check_config_nudge(skip_banner=False):
     import os
     from sarathi.config.config_manager import config
     
-    config_path = Path.home() / ".sarathi" / "config.yaml"
+    global_config_path = Path.home() / ".sarathi" / "config.yaml"
+    local_config_path = Path("sarathi.yaml")
     
-    # 1. If no config, show banner and nudge
-    if not config_path.exists():
+    # 1. If no config (neither global nor local), show banner and nudge
+    if not global_config_path.exists() and not local_config_path.exists():
         if not skip_banner:
             print_banner()
-        print("\033[93mTip: Welcome! Run 'sarathi config init' to set up your LLM configuration.\033[0m")
+        print("\033[93mTip: No configuration found (~/.sarathi/config.yaml or sarathi.yaml). Run 'sarathi config init' to get started.\033[0m")
         print("-" * 50)
         return True # Showed something
     

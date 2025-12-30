@@ -7,6 +7,7 @@ with smart batching to optimize API costs.
 import asyncio
 import subprocess
 from typing import Dict, List, Tuple, Optional
+from sarathi.config.config_manager import config
 from sarathi.llm.async_llm import AsyncLLMClient
 
 
@@ -35,12 +36,13 @@ class ParallelDiffAnalyzer:
         self.agent_name = agent_name
         self.client = AsyncLLMClient(agent_name)
         
-        self.file_prompt = """Analyze this git diff and provide a 1-line summary (max 15 words).
+        # Load prompts from config
+        self.file_prompt = config.get("prompts.file_analysis", """Analyze this git diff and provide a 1-line summary (max 15 words).
 Focus on: what changed and why it matters. Be specific about the change.
 
-{diff}"""
+{diff}""")
         
-        self.coordinator_prompt = """Generate a git commit message from these file summaries.
+        self.coordinator_prompt = config.get("prompts.commit_coordination", """Generate a git commit message from these file summaries.
 
 Rules:
 - First line: imperative mood summary, max 50 chars (e.g., "Add user authentication")
@@ -50,7 +52,7 @@ Rules:
 - Be concise but informative
 
 File changes:
-{summaries}"""
+{summaries}""")
     
     # --- Git Operations ---
     

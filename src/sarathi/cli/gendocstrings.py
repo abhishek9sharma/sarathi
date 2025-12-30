@@ -2,8 +2,6 @@ import argparse
 import os
 
 from sarathi.code.codetasks import CodeTransformer
-from sarathi.llm.call_llm import call_llm_model
-from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.io import get_filepaths, is_valid_directory, is_valid_file
 
 
