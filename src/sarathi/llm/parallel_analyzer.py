@@ -179,9 +179,8 @@ File changes:
         valid_results = [r for r in results if r["summary"]]
         
         if not valid_results:
-            # Fallback if all analyses failed
-            files = [f for r in results for f in r["files"]]
-            return f"Update {', '.join(files[:3])}" + ("..." if len(files) > 3 else "")
+            # No successful analyses - abort
+            return None
         
         summaries = "\n".join(
             f"- {', '.join(r['files'])}: {r['summary']}"

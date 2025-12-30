@@ -72,6 +72,8 @@ def execute_cmd(args):
         if generated_commit_msg:
             subprocess.run(["git", "commit", "-m", generated_commit_msg])
             subprocess.run(["git", "commit", "--amend"])
+        else:
+            print("❌ Failed to generate commit message. Please check your LLM configuration.")
     elif args.git_sub_cmd == "autocommit":
         generated_commit_msg = generate_commit_message()
         if generated_commit_msg:
@@ -81,3 +83,6 @@ def execute_cmd(args):
                 subprocess.run(["git", "commit", "-m", generated_commit_msg])
             else:
                 print("I would try to generate better commit msgs next time")
+        else:
+            print("❌ Failed to generate commit message. Please check your LLM configuration.")
+
