@@ -1,6 +1,6 @@
-from sarathi.llm.call_llm import call_llm_model
+from sarathi.llm.agent_engine import AgentEngine
 from sarathi.llm.prompts import prompt_dict
-
+from sarathi.llm.tool_library import registry # Ensure tools are registered
 
 def execute_cmd(args):
     """Execute a command.
@@ -12,11 +12,14 @@ def execute_cmd(args):
         None
     """
     question_asked = args.question
-    llm_response = call_llm_model(
-        prompt_dict["qahelper"], question_asked, agent_name="qahelper"
+    
+    # Initialize Agent with tools
+    agent = AgentEngine(
+        agent_name="qahelper",
+        system_prompt=prompt_dict["qahelper"]["system_msg"],
+        tools=list(registry.tools.keys())
     )
-    if "Error" not in llm_response:
-        answer = llm_response["choices"][0]["message"]["content"]
-        print(answer)
-    else:
-        print(llm_response["Error"])
+    
+    print("Agent is thinking (and may use tools)...")
+    answer = agent.run(question_asked)
+    print("\n" + answer)

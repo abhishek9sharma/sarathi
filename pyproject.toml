@@ -23,7 +23,8 @@ dependencies = [
     "requests",
     "astor",
     "black",
-    "PyYAML"
+    "PyYAML",
+    "aiohttp",
 ]
 
 [project.optional-dependencies]
