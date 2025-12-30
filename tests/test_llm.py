@@ -1,0 +1,81 @@
+import pytest
+from unittest.mock import patch, MagicMock
+from sarathi.llm.call_llm import call_llm_model, get_agent_config
+from sarathi.config.config_manager import ConfigManager
+
+# Mock ConfigManager to return predictable results
+@pytest.fixture
+def mock_config():
+    with patch("sarathi.llm.call_llm.config") as mock:
+        # Default behavior
+        mock.get_agent_config.return_value = {}
+        mock.get_provider_config.return_value = {"base_url": "https://api.openai.com/v1", "api_key": "test_key"}
+        mock.get.return_value = 30 # Timeout
+        yield mock
+
+def test_get_agent_config(mock_config):
+    # Test legacy mapping
+    mock_config.get_agent_config.return_value = {"model": "legacy_model"}
+    assert get_agent_config("autocommit") == {"model": "legacy_model"}
+    mock_config.get_agent_config.assert_called_with("commit_generator")
+    
+    # Test normal lookup
+    assert get_agent_config("qahelper") == {"model": "legacy_model"}
+    mock_config.get_agent_config.assert_called_with("qahelper")
+
+@patch("requests.post")
+def test_call_llm_success_text(mock_post, mock_config):
+    # Setup mock response
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "Hello World"}}]
+    }
+    mock_post.return_value = mock_response
+
+    prompt_info = {"model": "default-model", "system_msg": "You are helpful"}
+    
+    # Call function
+    result = call_llm_model(prompt_info, "Hi", resp_type="text", agent_name="qahelper")
+    
+    assert result == "Hello World"
+    
+    # Verify request structure
+    mock_post.assert_called_once()
+    args, kwargs = mock_post.call_args
+    assert kwargs["headers"]["Authorization"] == "Bearer test_key"
+    assert kwargs["json"]["messages"][0]["content"] == "You are helpful"
+    assert kwargs["json"]["messages"][1]["content"] == "Hi"
+
+@patch("requests.post")
+def test_call_llm_override_config(mock_post, mock_config):
+    # Setup specific agent config
+    mock_config.get_agent_config.return_value = {
+        "model": "super-model",
+        "system_prompt": "Override Prompt",
+        "temperature": 0.9
+    }
+    
+    mock_response = MagicMock()
+    mock_response.json.return_value = {}
+    mock_post.return_value = mock_response
+
+    call_llm_model({}, "Hi", agent_name="test_agent")
+    
+    # Verify overrides
+    args, kwargs = mock_post.call_args
+    body = kwargs["json"]
+    assert body["model"] == "super-model"
+    assert body["temperature"] == 0.9
+    assert body["messages"][0]["content"] == "Override Prompt"
+
+@patch("requests.post")
+def test_call_llm_failure(mock_post, mock_config):
+    # Setup exception
+    import requests
+    mock_post.side_effect = requests.exceptions.RequestException("Connection Error")
+    
+    result = call_llm_model({}, "Hi")
+    
+    assert isinstance(result, dict)
+    assert "Error" in result
+    assert "Connection Error" in result["Error"]

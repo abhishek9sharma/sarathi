@@ -62,7 +62,7 @@ class CodeTransformer:
         new_docstring = new_docstring.replace('"""', "")
         new_docstring = new_docstring.replace("'", "")
         new_docstring_node = ast.Expr(
-            value=ast.Str(new_docstring), lineno=method.lineno, col_offset=indentation
+            value=ast.Constant(value=new_docstring), lineno=method.lineno, col_offset=indentation
         )
         return new_docstring_node
 

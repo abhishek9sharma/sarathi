@@ -18,7 +18,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 keywords = ["cli", "coding assistant"]
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dependencies = [
     "requests",
     "astor",
