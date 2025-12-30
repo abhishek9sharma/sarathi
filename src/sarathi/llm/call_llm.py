@@ -46,11 +46,7 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     # 3. Construct URL and Headers
     base_url = provider_conf.get("base_url")
     if not base_url:
-        # Fallback defaults if config is empty for some reason
-        if provider_name == "openai":
-            base_url = "https://api.openai.com/v1"
-        elif provider_name == "ollama":
-            base_url = "http://localhost:11434"
+        raise ValueError(f"base_url not found in config for provider '{provider_name}'")
 
     # Handle OpenAI vs Ollama URL quirks
     # OpenAI usually expects /v1/chat/completions appended if base is just root

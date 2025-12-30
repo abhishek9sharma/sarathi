@@ -16,10 +16,9 @@ def setup_args(subparsers, opname="config"):
 
     init_parser = sub.add_parser("init", help="Initialize a new configuration file")
     init_parser.add_argument(
-        "--global",
-        dest="is_global",
-        action="store_true",
-        help="Create config in ~/.sarathi/config.yaml",
+        "--path",
+        "-p",
+        help="Path where the config file should be created (defaults to ~/.sarathi/config.yaml)",
     )
 
     show_parser = sub.add_parser("show", help="Show the current active configuration")
@@ -27,20 +26,21 @@ def setup_args(subparsers, opname="config"):
 
 def execute_cmd(args):
     if args.config_op == "init":
-        create_config(args.is_global)
+        create_config(args.path)
     elif args.config_op == "show":
         print(yaml.dump(config._config, default_flow_style=False))
     else:
         print("Use 'sarathi config init' or 'sarathi config show'")
 
 
-def create_config(is_global):
-    if is_global:
-        path = Path.home() / ".sarathi" / "config.yaml"
-        # Ensure dir exists
-        path.parent.mkdir(parents=True, exist_ok=True)
+def create_config(custom_path=None):
+    if custom_path:
+        path = Path(custom_path)
     else:
-        path = Path.cwd() / "sarathi.yaml"
+        path = Path.home() / ".sarathi" / "config.yaml"
+
+    # Ensure dir exists
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     if path.exists():
         overwrite = input(f"Config file {path} already exists. Overwrite? (y/n): ")

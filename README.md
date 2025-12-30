@@ -15,15 +15,37 @@ You can install the package using below command. Make sure you have Python and p
 Sarathi uses a dual configuration system: **YAML files** for settings and **Environment Variables** for secrets (like API Keys).
 
 ### 1. Initialize Configuration
-To create a local configuration file (`sarathi.yaml`) for your project:
+To create your global configuration file:
 
 ```bash
 sarathi config init
 ```
+This creates settings in `~/.sarathi/config.yaml`. This is the single source of truth for your preferences across all projects.
 
-You can edit this file to change models, timeouts, or system prompts.
+If you want to initialize a config at a specific path:
+```bash
+sarathi config init --path ./my-config.yaml
+```
 
-### 2. Set API Keys (Environment Variable Only)
+### 2. Using a Custom Configuration
+By default, Sarathi always looks at `~/.sarathi/config.yaml`. If you want to use a specific configuration file for a particular project or session, use the global `--config` (or `-c`) flag:
+
+```bash
+sarathi --config ./project-config.yaml git autocommit
+```
+
+### 3. Configuration Hierarchy
+Sarathi resolves configuration in the following order (lower items override higher ones):
+1. **Defaults**: Built-in settings.
+2. **Global Config**: `~/.sarathi/config.yaml` (or the file specified via `--config`).
+3. **Environment Variables**: For secrets and quick overrides (e.g., `OPENAI_API_KEY`).
+
+To see your current active configuration:
+```bash
+sarathi config show
+```
+
+### 3. Set API Keys (Environment Variable Only)
 For security, API keys **cannot** be stored in the config file. You must export them in your shell:
 
 **For OpenAI:**
@@ -35,7 +57,7 @@ export OPENAI_API_KEY="sk-..."
 ```bash
 # No API key needed usually, just set the endpoint in config or env
 export OPENAI_ENDPOINT_URL="http://localhost:11434/v1/chat/completions"
-# Or configure the provider in sarathi.yaml
+# Or configure the provider in sarathi.yaml/global config
 ```
 
 **Legacy Environment Variables:**
@@ -71,6 +93,11 @@ You can ask general coding questions to the assistant:
 - Run `sarathi ask -q "How do I reverse a list in Python?"`
 
 
-## Helpul references
+## Recent Changes
+- **Python 3.12+ Compatibility**: Fixed `ast.Str` deprecation/removal issues.
+- **Global Configuration**: Added support for user-wide configuration in `~/.sarathi/config.yaml`.
+- **Config Management**: New `sarathi config show` and `sarathi config init --global` commands.
+
+## Helpful references
     - https://dev.to/taikedz/ive-parked-my-side-projects-3o62
     - https://github.com/lightningorb/autocommit
