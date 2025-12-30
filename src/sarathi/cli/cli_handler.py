@@ -48,6 +48,43 @@ def parse_cmd_args():
     return parser.parse_args()
 
 
+BANNER = r"""
+   ____                  _   _     _ 
+  / ___|  __ _ _ __ __ _| |_| |__ (_)
+  \___ \ / _` | '__/ _` | __| '_ \| |
+   ___) | (_| | | | (_| | |_| | | | |
+  |____/ \__,_|_|  \__,_|\__|_| |_|_|
+                                     
+  AI Coding Assistant
+"""
+
+def print_banner():
+    print(BANNER)
+
+def check_config_nudge():
+    from pathlib import Path
+    import os
+    from sarathi.config.config_manager import config
+    
+    config_path = Path.home() / ".sarathi" / "config.yaml"
+    
+    # 1. If no config, show banner and nudge
+    if not config_path.exists():
+        print_banner()
+        print("\033[93mTip: Welcome! Run 'sarathi config init' to set up your LLM configuration.\033[0m")
+        print("-" * 50)
+        return True # Showed something
+    
+    # 2. If config exists but key missing, just show the warning (no banner)
+    active_provider = config.get("core.provider")
+    if active_provider == "openai":
+        api_key = os.getenv("SARATHI_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            print("\033[93mTip: OpenAI is active but OPENAI_API_KEY is not set.\033[0m")
+            print("-" * 50)
+            return True # Showed something
+    return False
+
 def main():
     try:
         from sarathi.config.config_manager import config
@@ -58,7 +95,15 @@ def main():
         if parsed_args.config:
             config.load_configs(parsed_args.config)
 
+        # Logic for banner and nudges
+        displayed_nudge = False
+        if parsed_args.op != "config":
+             displayed_nudge = check_config_nudge()
+
         if not parsed_args.op:
+            # Only print banner here if nudge didn't already print it
+            if not displayed_nudge:
+                print_banner()
             print("No command specified. Use --help to see available commands.")
             return
 
