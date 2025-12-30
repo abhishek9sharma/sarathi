@@ -62,4 +62,10 @@ CLI_REGISTRY = {
         "handler": "execute_cmd",
         "custom_setup": True,  # Config has subcommands (init, show)
     },
+    "code": {
+        "help": "Code editing and test generation",
+        "module": "sarathi.cli.code_cli",
+        "handler": "execute_cmd",
+        "custom_setup": True,  # Code has subcommands (gentest, edit)
+    },
 }

@@ -24,6 +24,11 @@ DEFAULT_CONFIG = {
             "provider": "openai",
             "model": "gpt-4o-mini",
         },
+        "code_editor": {
+            "provider": "openai",
+            "model": "gpt-4o",  # Use more capable model for code editing
+            "temperature": 0.3,  # Lower temperature for more deterministic code
+        },
     },
 }
 
