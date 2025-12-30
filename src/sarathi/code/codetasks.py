@@ -42,7 +42,7 @@ class CodeTransformer:
         """
         methods = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 methods.append(node)
         return methods
 

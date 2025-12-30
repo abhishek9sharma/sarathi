@@ -165,3 +165,44 @@ def test_format_node_with_new_docstring(temp_python_file):
     
     assert isinstance(node, ast.Expr)
     assert isinstance(node.value, ast.Constant)
+
+ASYNC_CODE = '''
+async def my_async_func():
+    await other_func()
+'''
+
+@pytest.fixture
+def temp_async_file():
+    """Create a temporary Python file with async code for testing"""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        f.write(ASYNC_CODE)
+        temp_path = f.name
+    yield temp_path
+    os.unlink(temp_path)
+
+def test_async_method_docstring(temp_async_file):
+    """Test finding and updating async methods"""
+    ct = CodeTransformer(temp_async_file)
+    tree = ct.get_ast()
+    methods = ct.find_methods(tree)
+    
+    # Check if async method is found
+    assert len(methods) == 1
+    async_method = methods[0]
+    assert isinstance(async_method, ast.AsyncFunctionDef)
+    assert async_method.name == "my_async_func"
+
+    # Test updating docstring for async method
+    with patch('sarathi.code.codetasks.call_llm_model') as mock_llm:
+        mock_llm.return_value = "Async docstring"
+        
+        ct.update_docstrings(methods)
+        
+        assert mock_llm.called
+        
+        # Verify docstring insertion
+        assert len(async_method.body) > 0
+        docstring_node = async_method.body[0]
+        assert isinstance(docstring_node, ast.Expr)
+        assert isinstance(docstring_node.value, ast.Constant)
+        assert docstring_node.value.value == "Async docstring"
