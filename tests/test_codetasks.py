@@ -164,4 +164,4 @@ def test_format_node_with_new_docstring(temp_python_file):
     node = ct.format_node_with_new_docstring(new_docstring, method)
     
     assert isinstance(node, ast.Expr)
-    assert isinstance(node.value, ast.Str)
+    assert isinstance(node.value, ast.Constant)
