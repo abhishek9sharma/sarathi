@@ -35,18 +35,26 @@ class ConfigManager:
         self._config = copy.deepcopy(DEFAULT_CONFIG)
         self.load_configs()
 
-    def load_configs(self):
-        # 1. User Global Config (~/.sarathi/config.yaml)
-        global_config_path = Path.home() / ".sarathi" / "config.yaml"
-        if global_config_path.exists():
-            self._merge_from_file(global_config_path)
+    def load_configs(self, custom_path=None):
+        """Loads configuration. If custom_path is provided, it uses that.
+        Otherwise it defaults to the global ~/.sarathi/config.yaml.
+        """
+        # Always start with defaults
+        self._config = copy.deepcopy(DEFAULT_CONFIG)
 
-        # 2. Local Project Config (./sarathi.yaml)
-        local_config_path = Path.cwd() / "sarathi.yaml"
-        if local_config_path.exists():
-            self._merge_from_file(local_config_path)
+        if custom_path:
+            config_path = Path(custom_path)
+            if config_path.exists():
+                self._merge_from_file(config_path)
+            else:
+                print(f"Warning: Configuration file not found at {custom_path}")
+        else:
+            # User Global Config (~/.sarathi/config.yaml)
+            global_config_path = Path.home() / ".sarathi" / "config.yaml"
+            if global_config_path.exists():
+                self._merge_from_file(global_config_path)
 
-        # 3. Environment Variables (Legacy & Secrets override)
+        # Environment Variables (apply last for secrets)
         self._apply_env_overrides()
 
     def _merge_from_file(self, path):

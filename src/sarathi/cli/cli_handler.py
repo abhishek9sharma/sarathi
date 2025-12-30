@@ -21,21 +21,24 @@ def resolve_type(type_name, parser):
 
 def parse_cmd_args():
     parser = argparse.ArgumentParser(description="Sarathi - AI Coding Assistant")
+    parser.add_argument(
+        "--config", "-c", help="Path to a custom configuration YAML file"
+    )
     subparsers = parser.add_subparsers(dest="op")
 
-    for cmd_name, config in CLI_REGISTRY.items():
+    for cmd_name, config_item in CLI_REGISTRY.items():
         # Dynamic Import
-        module = importlib.import_module(config["module"])
+        module = importlib.import_module(config_item["module"])
 
-        if config.get("custom_setup"):
+        if config_item.get("custom_setup"):
             # Let the module handle subparser creation entirely
             if hasattr(module, "setup_args"):
                 module.setup_args(subparsers, opname=cmd_name)
         else:
             # Create parser for simple commands
-            cmd_parser = subparsers.add_parser(cmd_name, help=config.get("help"))
+            cmd_parser = subparsers.add_parser(cmd_name, help=config_item.get("help"))
 
-            for arg_def in config.get("args", []):
+            for arg_def in config_item.get("args", []):
                 flags = arg_def["flags"]
                 kwargs = arg_def["kwargs"].copy()
                 if "type" in kwargs:
@@ -47,7 +50,13 @@ def parse_cmd_args():
 
 def main():
     try:
+        from sarathi.config.config_manager import config
+
         parsed_args = parse_cmd_args()
+
+        # Load custom config if provided
+        if parsed_args.config:
+            config.load_configs(parsed_args.config)
 
         if not parsed_args.op:
             print("No command specified. Use --help to see available commands.")
