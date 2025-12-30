@@ -1,6 +1,10 @@
 import os
 import sys
 import re
+try:
+    import readline
+except ImportError:
+    readline = None
 from pathlib import Path
 from sarathi.llm.agent_engine import AgentEngine
 from sarathi.llm.tool_library import registry
@@ -23,6 +27,88 @@ class ChatSession:
         )
         self.running = True
         self.permissions = {} # tool_name -> "always" | "ask" (default)
+        self.project_files = []
+        self._index_project()
+        self._setup_readline()
+
+    def _index_project(self):
+        """Build a list of all files in the project for autocomplete."""
+        self.project_files = [] # Full paths
+        self.filename_to_path = {} # name -> [list of full paths]
+        
+        ignore_ext = {'.pyc', '.pyo', '.pyd', '.so', '.dll', '.exe', '.DS_Store', '.o', '.bin'}
+        ignore_dirs = {'.git', '__pycache__', 'venv', '.venv', 'node_modules', '.sarathi', '.pytest_cache', '.idea', '.vscode'}
+        
+        try:
+            for root, dirs, files in os.walk("."):
+                dirs[:] = [d for d in dirs if d not in ignore_dirs]
+                for file in files:
+                    ext = os.path.splitext(file)[1]
+                    if ext in ignore_ext:
+                        continue
+                        
+                    rel_path = os.path.relpath(os.path.join(root, file), ".")
+                    full_at_path = f"@{rel_path}"
+                    self.project_files.append(full_at_path)
+                    
+                    # Store filename mapping
+                    if file not in self.filename_to_path:
+                        self.filename_to_path[file] = []
+                    self.filename_to_path[file].append(rel_path)
+                    
+            if self.project_files:
+                print(f"Project indexed: {len(self.project_files)} files available for @-completion.")
+        except Exception as e:
+            print(f"Warning: Project indexing failed: {e}")
+
+    def _setup_readline(self):
+        """Configure readline for autocomplete."""
+        if not readline:
+            return
+            
+        readline.set_completer(self._completer)
+        if 'libedit' in readline.__doc__:
+            # macOS default (libedit) setup for cycling
+            readline.parse_and_bind("bind ^I menu-complete")
+        else:
+            # GNU Readline setup for cycling
+            readline.parse_and_bind("tab: menu-complete")
+            
+        # Treat @, /, and . as part of the word for completion
+        delims = readline.get_completer_delims()
+        for char in "@/.-":
+            delims = delims.replace(char, "")
+        readline.set_completer_delims(delims)
+
+    def _completer(self, text, state):
+        """Readline completer for @mentions and slash commands."""
+        cmds = ["/exit", "/quit", "/clear", "/history", "/reindex"]
+        
+        if text.startswith("@"):
+            query = text[1:]
+            options = []
+            
+            # 1. Match by filename first (Claude-like)
+            for fname, paths in self.filename_to_path.items():
+                if fname.startswith(query):
+                    for p in paths:
+                        options.append(f"@{p}")
+            
+            # 2. Match by path if no filename matches or to be thorough
+            # We use a set to avoid duplicates from step 1
+            path_matches = [f for f in self.project_files if text in f and f not in options]
+            options.extend(path_matches)
+            
+            # Sort options: prioritize shorter paths for same filename
+            options.sort(key=lambda x: (len(x.split('/')), x))
+            
+            if state < len(options):
+                return options[state]
+        elif text.startswith("/"):
+            options = [c for c in cmds if c.startswith(text)]
+            if state < len(options):
+                return options[state]
+        return None
 
     def _confirm_tool(self, tool_name, tool_args):
         """Callback to confirm tool execution with user."""
@@ -113,6 +199,9 @@ class ChatSession:
         elif cmd == "/clear":
             self.agent.messages = [self.agent.messages[0]] # Keep system prompt
             print("Context cleared.")
+        elif cmd == "/reindex":
+            self._index_project()
+            print(f"Project re-indexed. Found {len(self.project_files)} files.")
         elif cmd == "/history":
             for msg in self.agent.messages:
                 role = msg.get("role", "unknown")

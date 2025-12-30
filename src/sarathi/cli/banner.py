@@ -16,7 +16,7 @@ def print_banner():
     l3 = format_yellow("        |\\_              ") + format_cyan("~/(\\\\")
     
     # Line 4:    |   /| ~~~______~//  @@
-    l4 = format_yellow("        |   /|~~~~~~")+format_cyan("______") + format_cyan("~//  @@")
+    l4 = format_yellow("        |   /|~~~~~~")+format_cyan("______") + format_cyan("~// @@")
     
     # Line 5:    |\-/ |===(=)===|(_|_
     l5 = format_yellow("        |\\-/ |~~~~~~")+format_cyan("(=)===|") + format_cyan("(_|_")
