@@ -134,6 +134,7 @@ import copy
 class ConfigManager:
     def __init__(self):
         self._config = copy.deepcopy(DEFAULT_CONFIG)
+        self._loaded_files = []
         self.load_configs()
 
     def load_configs(self, custom_path=None):
@@ -144,6 +145,7 @@ class ConfigManager:
         """
         # Always start with defaults
         self._config = copy.deepcopy(DEFAULT_CONFIG)
+        self._loaded_files = []
 
         if custom_path:
             config_path = Path(custom_path)
@@ -180,6 +182,7 @@ class ConfigManager:
                                 )
 
                     self._deep_merge(self._config, data)
+                    self._loaded_files.append(str(path.absolute()))
         except Exception as e:
             print(f"Warning: Failed to load config from {path}: {e}")
 

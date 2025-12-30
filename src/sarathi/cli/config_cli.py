@@ -21,6 +21,8 @@ def setup_args(subparsers, opname="config"):
     )
 
     show_parser = sub.add_parser("show", help="Show the current active configuration")
+    
+    info_parser = sub.add_parser("info", help="Show information about loaded configuration files")
 
 
 def execute_cmd(args):
@@ -28,8 +30,15 @@ def execute_cmd(args):
         create_config(args.path)
     elif args.config_op == "show":
         print(yaml.dump(config._config, default_flow_style=False))
+    elif args.config_op == "info":
+        print("Active Configuration Sources:")
+        if config._loaded_files:
+            for file_path in config._loaded_files:
+                print(f"  - {file_path}")
+        else:
+            print("  - Defaults (no config files loaded)")
     else:
-        print("Use 'sarathi config init' or 'sarathi config show'")
+        print("Use 'sarathi config init', 'sarathi config show', or 'sarathi config info'")
 
 
 def create_config(custom_path=None):
