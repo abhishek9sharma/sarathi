@@ -98,7 +98,10 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
         usage_tracker.record_call(end_time - start_time, usage)
 
         if resp_type == "text":
-            return data["choices"][0]["message"]["content"]
+            choices = data.get("choices", [])
+            if not choices:
+                return "Error: No response from LLM provider."
+            return choices[0].get("message", {}).get("content", "Error: No content in LLM response.")
         return data
 
     except requests.exceptions.RequestException as e:

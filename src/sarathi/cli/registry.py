@@ -68,4 +68,10 @@ CLI_REGISTRY = {
         "handler": "execute_cmd",
         "custom_setup": True,  # Code has subcommands (gentest, edit)
     },
+    "chat": {
+        "help": "Start an interactive chat session",
+        "module": "sarathi.cli.chat_cli",
+        "handler": "execute_cmd",
+        "custom_setup": True,
+    },
 }

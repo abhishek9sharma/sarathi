@@ -4,7 +4,7 @@ from sarathi.llm.call_llm import call_llm_model
 from sarathi.llm.tools import registry
 
 class AgentEngine:
-    def __init__(self, agent_name, system_prompt=None, tools=None):
+    def __init__(self, agent_name, system_prompt=None, tools=None, tool_confirmation_callback=None):
         from sarathi.config.config_manager import config
         self.agent_name = agent_name
         
@@ -14,6 +14,7 @@ class AgentEngine:
             
         self.system_prompt = system_prompt
         self.tools = tools or []
+        self.tool_confirmation_callback = tool_confirmation_callback
         self.messages = []
         if system_prompt:
             self.messages.append({"role": "system", "content": system_prompt})
@@ -27,23 +28,54 @@ class AgentEngine:
             # For now, let's assume we need to extend call_llm_model to handle tools.
             response = self._call_llm()
             
-            # Check for tool calls in response
-            # Assuming OpenAI format for tool calls
-            choice = response.get("choices", [{}])[0]
+            choices = response.get("choices", [])
+            if not choices:
+                return "Error: No choices returned from LLM."
+                
+            choice = choices[0]
+            if not choice:
+                return "Error: Empty choice returned from LLM."
+                
             message = choice.get("message", {})
+            if not message:
+                return "Error: No message in LLM choice."
             
-            if message.get("tool_calls"):
+            tool_calls = message.get("tool_calls")
+            if tool_calls:
                 self.messages.append(message)
-                for tool_call in message["tool_calls"]:
-                    func_name = tool_call["function"]["name"]
-                    func_args = tool_call["function"]["arguments"]
+                for tool_call in tool_calls:
+                    if not isinstance(tool_call, dict):
+                        continue
+                        
+                    func_info = tool_call.get("function")
+                    if not func_info:
+                        continue
+                        
+                    func_name = func_info.get("name")
+                    func_args = func_info.get("arguments")
+                    
+                    if not func_name:
+                        continue
                     
                     print(f"Agent {self.agent_name} is calling tool: {func_name}")
+                    
+                    # Check permission if callback provided
+                    if self.tool_confirmation_callback:
+                        if not self.tool_confirmation_callback(func_name, func_args):
+                            print(f"Tool execution denied by user: {func_name}")
+                            self.messages.append({
+                                "role": "tool",
+                                "tool_call_id": tool_call.get("id"),
+                                "name": func_name,
+                                "content": "Tool execution was denied by the user."
+                            })
+                            continue
+
                     result = registry.call_tool(func_name, func_args)
                     
                     self.messages.append({
                         "role": "tool",
-                        "tool_call_id": tool_call["id"],
+                        "tool_call_id": tool_call.get("id"),
                         "name": func_name,
                         "content": str(result)
                     })

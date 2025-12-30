@@ -4,6 +4,7 @@ import sys
 
 from sarathi.cli.registry import CLI_REGISTRY
 from sarathi.utils.io import is_valid_directory, is_valid_file
+from sarathi.cli.banner import print_banner
 
 # Map string type names to actual functions if needed
 TYPE_MAP = {
@@ -48,18 +49,6 @@ def parse_cmd_args():
     return parser.parse_args()
 
 
-BANNER = r"""
-   ____                  _   _     _ 
-  / ___|  __ _ _ __ __ _| |_| |__ (_)
-  \___ \ / _` | '__/ _` | __| '_ \| |
-   ___) | (_| | | | (_| | |_| | | | |
-  |____/ \__,_|_|  \__,_|\__|_| |_|_|
-                                     
-  AI Coding Assistant
-"""
-
-def print_banner():
-    print(BANNER)
 
 def check_config_nudge(skip_banner=False):
     from pathlib import Path
