@@ -51,7 +51,9 @@ class AgentEngine:
         # Let's adapt call_llm_model or import it and use its logic
         from sarathi.llm.call_llm import get_agent_config
         from sarathi.config.config_manager import config
+        from sarathi.utils.usage import usage_tracker
         import requests
+        import time
 
         agent_conf = get_agent_config(self.agent_name)
         provider_name = agent_conf.get("provider", "openai")
@@ -75,6 +77,15 @@ class AgentEngine:
         if not body["tools"]:
             del body["tools"]
 
+        start_time = time.time()
         res = requests.post(url, headers=headers, json=body, timeout=config.get("core.timeout", 30))
         res.raise_for_status()
-        return res.json()
+        end_time = time.time()
+        
+        data = res.json()
+        
+        # Record usage
+        usage = data.get("usage")
+        usage_tracker.record_call(end_time - start_time, usage)
+        
+        return data

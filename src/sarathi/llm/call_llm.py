@@ -1,6 +1,8 @@
+import time
 import requests
 
 from sarathi.config.config_manager import config
+from sarathi.utils.usage import usage_tracker
 
 
 def get_agent_config(agent_name):
@@ -79,15 +81,23 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     }
 
     response = None
+    start_time = time.time()
     try:
         response = requests.post(
             url, headers=headers, json=body, timeout=config.get("core.timeout", 30)
         )
         response.raise_for_status()
+        end_time = time.time()
+        
+        data = response.json()
+        
+        # Record usage
+        usage = data.get("usage")
+        usage_tracker.record_call(end_time - start_time, usage)
 
         if resp_type == "text":
-            return response.json()["choices"][0]["message"]["content"]
-        return response.json()
+            return data["choices"][0]["message"]["content"]
+        return data
 
     except requests.exceptions.RequestException as e:
         print(f"Error calling LLM: {e}")

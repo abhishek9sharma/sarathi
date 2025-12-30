@@ -98,9 +98,17 @@ class AsyncLLMClient:
         }
         
         session = await self._get_session()
+        start_time = time.time()
         async with session.post(url, headers=headers, json=body) as resp:
             resp.raise_for_status()
             data = await resp.json()
+            end_time = time.time()
+            
+            # Record usage
+            usage = data.get("usage")
+            from sarathi.utils.usage import usage_tracker
+            usage_tracker.record_call(end_time - start_time, usage)
+            
             return data["choices"][0]["message"]["content"]
     
     async def complete_batch(
