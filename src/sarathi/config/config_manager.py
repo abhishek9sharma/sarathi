@@ -90,12 +90,6 @@ class ConfigManager:
             # but historically it meant OpenAI.
             self._config["providers"]["openai"]["api_key"] = api_key
 
-        endpoint = os.getenv("OPENAI_ENDPOINT_URL")
-        if endpoint:
-            self._config["providers"]["openai"]["base_url"] = endpoint.rstrip(
-                "/chat/completions"
-            )
-
         model = os.getenv("OPENAI_MODEL_NAME")
         if model:
             # This is tricky as we don't know which agent checking the env var was meant for.
