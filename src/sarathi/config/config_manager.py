@@ -20,11 +20,8 @@ DEFAULT_CONFIG = {
 - Use standard English
 - Try to be concise. Do not write multiple lines if not required
 - If you think the diff fixes a comminbug, security issue or CVE which you know about, mention that in your response
-- Do not repeat instructions in commit message""",
-        "qahelper": """Your task is to answer the below question to the best of your knowledge. Please follow below guidelines
-- Think like a principal software engineer who is assiting a junior developer
-- Do not give any nasty comments or answers.
-- If you do not know the answer do not make it up, just say 'sorry I do not know answer to that question'""",
+- Do not repeat instructions in commit message
+- Do NOT use markdown code blocks (```) or other formatting. Return plain text only.""",
         "update_docstrings": """Your task is to generate Google style docstrings format for the python code provided below. Please follow below guidelines while generating the docstring
 - docstrings should be generated in Google style docstrings format. An example is mentioned below
         \"\"\"Reads the content of a file.
@@ -102,6 +99,7 @@ Rules:
 - Bullet points for each significant change
 - Max 72 chars per line
 - Be concise but informative
+- Do NOT use markdown code blocks (```) or other formatting. Return plain text only.
 
 File changes:
 {summaries}""",
@@ -129,10 +127,6 @@ Current Directory: {current_dir}"""
             "provider": "openai",
             "model": "gpt-4o-mini",
             "temperature": 0.7,
-        },
-        "qahelper": {
-            "provider": "openai",
-            "model": "gpt-4o-mini",
         },
         "update_docstrings": {
             "provider": "openai",
@@ -229,7 +223,7 @@ class ConfigManager:
             # This is tricky as we don't know which agent checking the env var was meant for.
             # In legacy sarathi, it applied to everything.
             self._config["agents"]["commit_generator"]["model"] = model
-            self._config["agents"]["qahelper"]["model"] = model
+            self._config["agents"]["chat"]["model"] = model
 
     def get(self, key_path, default=None):
         """Get a value using dot notation e.g. 'agents.commit_generator.model'"""

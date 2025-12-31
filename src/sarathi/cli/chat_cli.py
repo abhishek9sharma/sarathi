@@ -12,7 +12,7 @@ from sarathi.utils.formatters import format_green, format_code, format_cyan, for
 from sarathi.cli.banner import print_banner
 
 class ChatSession:
-    def __init__(self):
+    def __init__(self, agent_name="chat"):
         from sarathi.config.config_manager import config
         
         # Hydrate prompt with current directory
@@ -20,7 +20,7 @@ class ChatSession:
         system_prompt = raw_prompt.replace("{current_dir}", os.getcwd())
         
         self.agent = AgentEngine(
-            agent_name="chat",
+            agent_name=agent_name,
             system_prompt=system_prompt,
             tools=list(registry.tools.keys()),
             tool_confirmation_callback=self._confirm_tool
@@ -30,6 +30,11 @@ class ChatSession:
         self.project_files = []
         self._index_project()
         self._setup_readline()
+
+    def process_input(self, user_input):
+        """Processes a single input line, handling mentions and tools."""
+        processed_input = self._process_at_mentions(user_input)
+        return self.agent.run(processed_input)
 
     def _index_project(self):
         """Build a list of all files in the project for autocomplete."""
@@ -177,10 +182,7 @@ class ChatSession:
 
                 print(f"\n{format_green('Sarathi is thinking...')}")
                 
-                # Pre-process input for @mentions
-                processed_input = self._process_at_mentions(user_input)
-                
-                response = self.agent.run(processed_input)
+                response = self.process_input(user_input)
                 print(f"\n{response}\n")
 
             except KeyboardInterrupt:
@@ -226,8 +228,14 @@ class ChatSession:
             print(f"Unknown command: {cmd}")
 
 def setup_args(subparsers, opname="chat"):
-    parser = subparsers.add_parser(opname, help="Start an interactive chat session")
+    parser = subparsers.add_parser(opname, help="Start an interactive chat session or ask a one-off question")
+    parser.add_argument("-q", "--question", help="Ask a single question and exit")
 
 def execute_cmd(args):
     session = ChatSession()
-    session.start()
+    if getattr(args, "question", None):
+        print(f"\n{format_green('Sarathi is thinking...')}")
+        response = session.process_input(args.question)
+        print(f"\n{response}\n")
+    else:
+        session.start()

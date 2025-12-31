@@ -22,17 +22,6 @@ CLI_REGISTRY = {
         # but we route it dynamically.
         "custom_setup": True,
     },
-    "ask": {
-        "help": "Ask the AI a question",
-        "module": "sarathi.cli.qahelper",
-        "handler": "execute_cmd",
-        "args": [
-            {
-                "flags": ["-q", "--question"],
-                "kwargs": {"required": True, "help": "The question to ask"},
-            }
-        ],
-    },
     "docstrgen": {
         "help": "Generate Python docstrings",
         "module": "sarathi.cli.gendocstrings",
@@ -69,7 +58,7 @@ CLI_REGISTRY = {
         "custom_setup": True,  # Code has subcommands (gentest, edit)
     },
     "chat": {
-        "help": "Start an interactive chat session",
+        "help": "Ask a question or start an interactive chat session",
         "module": "sarathi.cli.chat_cli",
         "handler": "execute_cmd",
         "custom_setup": True,

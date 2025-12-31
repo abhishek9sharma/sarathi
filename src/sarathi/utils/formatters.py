@@ -45,3 +45,29 @@ def format_code(code):
     """
     out = format_str(code, mode=FileMode())
     return out
+
+
+def clean_llm_response(text):
+    """
+    Cleans the LLM response by removing markdown code blocks (```).
+    
+    Args:
+        text (str): The raw response from LLM.
+        
+    Returns:
+        str: The cleaned text.
+    """
+    if not text:
+        return text
+    
+    # Strip leading/trailing whitespace
+    text = text.strip()
+    
+    # Check for triple backtick blocks
+    if text.startswith("```") and text.endswith("```"):
+        # Remove the first line if it contains a language identifier (e.g. ```text or ```markdown)
+        lines = text.splitlines()
+        content_lines = lines[1:-1]
+        return "\n".join(content_lines).strip()
+    
+    return text

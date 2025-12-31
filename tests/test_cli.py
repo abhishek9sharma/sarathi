@@ -11,30 +11,38 @@ def test_parse_args_help():
              with patch("sys.argv", ["sarathi", "--help"]):
                  parse_cmd_args()
 
-def test_parse_args_ask():
-    with patch("sys.argv", ["sarathi", "ask", "-q", "hello"]):
+def test_parse_args_chat_question():
+    with patch("sys.argv", ["sarathi", "chat", "-q", "hello"]):
+        # We need to mock chat_cli setup_args as parse_cmd_args calls it
         args = parse_cmd_args()
-        assert args.op == "ask"
+        assert args.op == "chat"
         assert args.question == "hello"
 
 def test_registry_structure():
     assert "git" in CLI_REGISTRY
-    assert "ask" in CLI_REGISTRY
+    assert "chat" in CLI_REGISTRY
     assert CLI_REGISTRY["git"]["custom_setup"] is True
     
 def test_main_dispatch():
-    # Mock the handler for the 'ask' command to ensure it gets called
-    with patch("sys.argv", ["sarathi", "ask", "-q", "hello"]):
+    # Mock the handler for the 'chat' command to ensure it gets called
+    with patch("sys.argv", ["sarathi", "chat", "-q", "hello"]):
         # We need to mock importlib because main() does dynamic imports
         mock_module = MagicMock()
         mock_handler = MagicMock()
+        
+        def mock_setup(subparsers, opname):
+            parser = subparsers.add_parser(opname)
+            if opname == "chat":
+                parser.add_argument("-q", "--question")
+        
         setattr(mock_module, "execute_cmd", mock_handler)
+        setattr(mock_module, "setup_args", mock_setup)
         
         with patch("importlib.import_module", return_value=mock_module) as mock_import:
             main()
             
             # Verify module import
-            mock_import.assert_called_with(CLI_REGISTRY["ask"]["module"])
+            mock_import.assert_called_with(CLI_REGISTRY["chat"]["module"])
             
             # Verify handler called
             mock_handler.assert_called_once()

@@ -9,6 +9,7 @@ import subprocess
 from typing import Dict, List, Tuple, Optional
 from sarathi.config.config_manager import config
 from sarathi.llm.async_llm import AsyncLLMClient
+from sarathi.utils.formatters import clean_llm_response
 
 
 class ParallelDiffAnalyzer:
@@ -192,7 +193,8 @@ File changes:
         prompt = self.coordinator_prompt.format(summaries=summaries)
         messages = [{"role": "user", "content": prompt}]
         
-        return await self.client.complete(messages, max_tokens=200)
+        response = await self.client.complete(messages, max_tokens=200)
+        return clean_llm_response(response)
     
     # --- Main Entry Points ---
     

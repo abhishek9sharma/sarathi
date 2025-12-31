@@ -40,7 +40,7 @@ def test_config_file_loading_and_security(clean_env):
             api_key: "BAD_KEY"
             base_url: "https://custom.url"
     agents:
-        qahelper:
+        chat:
             system_prompt: "I am a test prompt"
     """
     
@@ -52,7 +52,7 @@ def test_config_file_loading_and_security(clean_env):
                 # Check normal overrides
                 assert cm.get("core.timeout") == 99
                 assert cm.get("providers.openai.base_url") == "https://custom.url"
-                assert cm.get("agents.qahelper.system_prompt") == "I am a test prompt"
+                assert cm.get("agents.chat.system_prompt") == "I am a test prompt"
                 
                 # Check SECURITY Feature: api_key should be stripped
                 assert cm.get("providers.openai.api_key") is None
@@ -68,7 +68,7 @@ def test_env_var_overrides(clean_env):
     
     # Model should update agents
     assert cm.get("agents.commit_generator.model") == "env-model"
-    assert cm.get("agents.qahelper.model") == "env-model"
+    assert cm.get("agents.chat.model") == "env-model"
 
 def test_config_manager_set_and_save():
     with patch("builtins.open", mock_open()) as mock_file:

@@ -3,6 +3,7 @@ import requests
 
 from sarathi.config.config_manager import config
 from sarathi.utils.usage import usage_tracker
+from sarathi.utils.formatters import clean_llm_response
 
 
 def get_agent_config(agent_name):
@@ -105,7 +106,8 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
             choices = data.get("choices", [])
             if not choices:
                 return "Error: No response from LLM provider."
-            return choices[0].get("message", {}).get("content", "Error: No content in LLM response.")
+            content = choices[0].get("message", {}).get("content", "Error: No content in LLM response.")
+            return clean_llm_response(content)
         return data
 
     except requests.exceptions.RequestException as e:

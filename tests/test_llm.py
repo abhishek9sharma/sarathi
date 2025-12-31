@@ -23,8 +23,8 @@ def test_get_agent_config(mock_config):
     mock_config.get_agent_config.assert_called_with("commit_generator")
     
     # Test normal lookup
-    assert get_agent_config("qahelper") == {"model": "legacy_model"}
-    mock_config.get_agent_config.assert_called_with("qahelper")
+    assert get_agent_config("chat") == {"model": "legacy_model"}
+    mock_config.get_agent_config.assert_called_with("chat")
 
 @patch("requests.post")
 def test_call_llm_success_text(mock_post, mock_config):
@@ -38,7 +38,7 @@ def test_call_llm_success_text(mock_post, mock_config):
     prompt_info = {"model": "default-model", "system_msg": "You are helpful"}
     
     # Call function
-    result = call_llm_model(prompt_info, "Hi", resp_type="text", agent_name="qahelper")
+    result = call_llm_model(prompt_info, "Hi", resp_type="text", agent_name="chat")
     
     assert result == "Hello World"
     

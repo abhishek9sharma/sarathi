@@ -98,7 +98,7 @@ def main():
             print_banner()
             if not check_config_nudge(skip_banner=True):
                 # Default nudge when everything is fine but banner is shown
-                print("\033[94mTip: Sarathi is configured and ready. Try 'sarathi ask' or 'sarathi git autocommit'.\033[0m")
+                print("\033[94mTip: Sarathi is configured and ready. Try 'sarathi chat' or 'sarathi git autocommit'.\033[0m")
                 print("-" * 50)
             
             print("No command specified. Use --help to see available commands.")
