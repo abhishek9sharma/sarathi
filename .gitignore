@@ -163,3 +163,4 @@ test.py
 launch.json
 .DS_Store/
 point_to_openai.sh
+debug_example.py

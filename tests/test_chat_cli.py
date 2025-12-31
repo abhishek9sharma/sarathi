@@ -85,25 +85,29 @@ def test_file_injection(mock_agent_engine, tmp_path):
     assert "Secret Content" in processed
     assert f"Context from {f}" in processed
 
-@patch("builtins.input")
-def test_permission_callback(mock_input, mock_agent_engine):
+@patch("questionary.select")
+def test_permission_callback(mock_select, mock_agent_engine):
     """Test permission logic"""
     session = ChatSession()
+    
+    # Mocking the questionary chain: select(...).ask()
+    mock_ask = MagicMock()
+    mock_select.return_value.ask = mock_ask
     
     # 1. Non-sensitive tool (pass through)
     assert session._confirm_tool("read_file", {}) is True
     
     # 2. Sensitive tool - Deny
-    mock_input.return_value = "n"
+    mock_ask.return_value = "n"
     assert session._confirm_tool("run_command", {}) is False
     
     # 3. Sensitive tool - Allow
-    mock_input.return_value = "y"
+    mock_ask.return_value = "y"
     assert session._confirm_tool("run_command", {}) is True
     
     # 4. Sensitive tool - Always
-    mock_input.return_value = "always"
+    mock_ask.return_value = "always"
     assert session._confirm_tool("run_command", {}) is True
-    # Should now pass without input
-    mock_input.return_value = "n" # Should be ignored
+    # Should now pass without calling select again
+    mock_ask.return_value = "n"
     assert session._confirm_tool("run_command", {}) is True
