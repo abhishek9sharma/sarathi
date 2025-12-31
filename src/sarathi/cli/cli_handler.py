@@ -25,6 +25,9 @@ def parse_cmd_args():
     parser.add_argument(
         "--config", "-c", help="Path to a custom configuration YAML file"
     )
+    parser.add_argument(
+        "--debug", "-v", action="store_true", help="Enable verbose debug logging"
+    )
     subparsers = parser.add_subparsers(dest="op")
 
     for cmd_name, config_item in CLI_REGISTRY.items():
@@ -87,6 +90,9 @@ def main():
         # Load custom config if provided
         if parsed_args.config:
             config.load_configs(parsed_args.config)
+        
+        if parsed_args.debug:
+            config.set("core.debug", True, save=False)
 
         # Logic for banner and nudges
         displayed_nudge = False
@@ -119,3 +125,7 @@ def main():
         summary = usage_tracker.get_summary()
         if summary:
             print(summary)
+
+
+# if __name__ == "__main__":
+#     main()

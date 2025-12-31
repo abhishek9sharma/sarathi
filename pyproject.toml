@@ -25,6 +25,7 @@ dependencies = [
     "black",
     "PyYAML",
     "aiohttp",
+    "questionary",
 ]
 
 [project.optional-dependencies]

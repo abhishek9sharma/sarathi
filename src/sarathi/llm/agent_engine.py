@@ -114,6 +114,12 @@ class AgentEngine:
         # Remove tools if empty
         if not body["tools"]:
             del body["tools"]
+            
+        if config.get("core.debug"):
+            from sarathi.utils.formatters import format_yellow
+            print(f"\n{format_yellow('--- DEBUG: LLM REQUEST BODY ---')}")
+            print(json.dumps(body, indent=2))
+            print(f"{format_yellow('--- END DEBUG ---')}\n")
 
         start_time = time.time()
         res = requests.post(

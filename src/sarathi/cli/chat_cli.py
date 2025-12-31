@@ -33,7 +33,14 @@ class ChatSession:
 
     def process_input(self, user_input):
         """Processes a single input line, handling mentions and tools."""
+        from sarathi.config.config_manager import config
         processed_input = self._process_at_mentions(user_input)
+        
+        if config.get("core.debug"):
+            print(f"\n{format_yellow('--- DEBUG: PROCESSED INPUT ---')}")
+            print(processed_input)
+            print(f"{format_yellow('--- END DEBUG ---')}\n")
+            
         return self.agent.run(processed_input)
 
     def _index_project(self):
@@ -131,20 +138,27 @@ class ChatSession:
         print(f"Agent wants to execute: {tool_name}")
         print(f"Arguments: {tool_args}")
         
-        while True:
-            choice = input(f"Allow? [y/n/always/session] (default: y): ").strip().lower()
-            if not choice:
-                choice = "y"
-                
-            if choice == "y":
-                return True
-            elif choice == "n":
-                return False
-            elif choice in ["always", "session"]:
-                self.permissions[tool_name] = "always"
-                return True
-            else:
-                print("Invalid choice. Please enter y, n, always, or session.")
+        import questionary
+        
+        choice = questionary.select(
+            f"Allow {tool_name} to execute?",
+            choices=[
+                questionary.Choice("Yes (Allow)", value="y"),
+                questionary.Choice("No (Deny)", value="n"),
+                questionary.Choice("Always allow for this tool", value="always"),
+                questionary.Choice("Allow session (all tools)", value="session"),
+            ],
+            default="y"
+        ).ask()
+
+        if choice == "y":
+            return True
+        elif choice == "n":
+            return False
+        elif choice in ["always", "session"]:
+            self.permissions[tool_name] = "always"
+            return True
+        return False # Fallback
 
     def _process_at_mentions(self, user_input):
         """Parse @filename and inject content."""
