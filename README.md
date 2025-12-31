@@ -105,7 +105,7 @@ You can generate docstrings for your python code using commands such as below
 #### Ask Questions
 You can ask general coding questions to the assistant:
 
-- Run `sarathi ask -q "How do I reverse a list in Python?"`
+- Run `sarathi chat -q "How do I reverse a list in Python?"`
 
 #### Interactive Chat Mode
 Start a persistent, interactive session where the assistant can help you edit code, run tests, and answer complex queries.
@@ -126,11 +126,24 @@ Quickly change or view the LLM model used by Sarathi:
 - Change for a specific agent: `sarathi model claude-3-5-sonnet --agent code_editor`
 - Temporary change (no save): `sarathi model llama3 --no-save`
 
+#### SBOM (Software Bill of Materials) Tools
+Audit your project's dependencies, licenses, and full dependency trees with a **beautiful Rich terminal UI**:
+
+- **Library Mapping**: `sarathi sbom imports` (See which file imports which external library)
+- **Dependency Graph**: `sarathi sbom depgraph` (Full visual tree of installed dependencies)
+- **Integrity Check**: `sarathi sbom check` (Detect unused bloat or undeclared dependencies)
+- **Specific Package**: `sarathi sbom depgraph -p requests`
+- **JSON Export**: `sarathi sbom imports --json`
+
+> **Tip**: Inside `sarathi chat`, you can ask "Who depends on aiohttp?" or "Check for unused dependencies" and the assistant will use these tools to audit your project.
+
 
 ## Recent Changes
-- **Interactive Chat Mode**: Added a powerful `/chat` mode with tool support, project indexing, and slash commands.
+- **Interactive Chat Mode**: Added a powerful `sarathi chat` mode with tool support, project indexing, and slash commands.
+- **SBOM Tools**: New `sarathi sbom` suite for auditing imports, licenses, and full dependency graphs.
 - **Dynamic Configuration**: New `sarathi config set` command to update settings from CLI.
 - **Model Switching**: Added `sarathi model` command and `/model` chat command to switch LLMs on the fly.
+- **Unified Interface**: Merged `ask` into `chat` for a simpler command structure.
 - **Air-Gapped Support**: Added `core.verify_ssl` toggle to support environments with private/self-signed certificates.
 - **Persistence**: Configuration updates are now preserved with proper YAML formatting.
 

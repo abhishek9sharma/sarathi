@@ -22,7 +22,11 @@ class AgentEngine:
     def run(self, user_input):
         self.messages.append({"role": "user", "content": user_input})
         
-        while True:
+        max_iterations = 10
+        iteration = 0
+        
+        while iteration < max_iterations:
+            iteration += 1
             # Current call_llm_model doesn't support tool history directly, 
             # we need to modify it or implement the loop here using the same logic.
             # For now, let's assume we need to extend call_llm_model to handle tools.
@@ -84,6 +88,8 @@ class AgentEngine:
             else:
                 # No tool calls, we have a final answer
                 return message.get("content")
+                
+        return "⚠️ Safety Limit reached (10 tool iterations). To prevent excessive API usage, I've paused here. Please clarify your request if needed."
 
     def _call_llm(self):
         # We need a version of call_llm_model that accepts full message history and tools
@@ -122,20 +128,40 @@ class AgentEngine:
             print(f"{format_yellow('--- END DEBUG ---')}\n")
 
         start_time = time.time()
-        res = requests.post(
-            url, 
-            headers=headers, 
-            json=body, 
-            timeout=config.get("core.timeout", 30),
-            verify=config.get("core.verify_ssl", True)
-        )
-        res.raise_for_status()
-        end_time = time.time()
+        max_retries = config.get("core.llm_retries", 3)
+        retry_delay = 2
         
-        data = res.json()
-        
-        # Record usage
-        usage = data.get("usage")
-        usage_tracker.record_call(end_time - start_time, usage)
-        
-        return data
+        for attempt in range(max_retries + 1):
+            try:
+                res = requests.post(
+                    url, 
+                    headers=headers, 
+                    json=body, 
+                    timeout=config.get("core.timeout", 30),
+                    verify=config.get("core.verify_ssl", True)
+                )
+                
+                if res.status_code == 429:
+                    if attempt < max_retries:
+                        print(f"⚠️  Rate limited (429). Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                        continue
+                
+                res.raise_for_status()
+                end_time = time.time()
+                
+                data = res.json()
+                
+                # Record usage
+                usage = data.get("usage")
+                usage_tracker.record_call(end_time - start_time, usage)
+                
+                return data
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries:
+                    print(f"⚠️  LLM call failed: {e}. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+                raise

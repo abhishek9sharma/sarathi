@@ -26,3 +26,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+
+    - name: SBOM Integrity Check
+      run: |
+        sarathi sbom check --fail

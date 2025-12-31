@@ -296,3 +296,71 @@ def get_project_structure(root_dir: str = ".") -> str:
         return json.dumps(structure, indent=2)
     except Exception as e:
         return f"Error getting project structure: {str(e)}"
+
+
+@registry.register(
+    name="get_project_sbom",
+    description="Get a Software Bill of Materials (SBOM) showing top-level dependencies, their versions, licenses, and which files import them."
+)
+def get_project_sbom(directory: str = ".") -> str:
+    """Analyze project imports and versions."""
+    try:
+        from sarathi.cli.sbom_cli import get_sbom_imports
+        lib_to_files, package_info = get_sbom_imports(directory)
+        return json.dumps({
+            "libraries": lib_to_files, 
+            "package_info": package_info
+        }, indent=2)
+    except Exception as e:
+        return f"Error getting SBOM: {str(e)}"
+
+
+@registry.register(
+    name="get_dependency_graph",
+    description="Get the full recursive dependency tree of installed packages starting from project roots or a specific package."
+)
+def get_dependency_graph(package_name: Optional[str] = None, directory: str = ".") -> str:
+    """Get recursive dependency tree."""
+    try:
+        from sarathi.cli.sbom_cli import get_sbom_imports, get_dep_graph_data
+        
+        if package_name:
+            root_pkgs = [package_name]
+        else:
+            lib_to_files, _ = get_sbom_imports(directory)
+            root_pkgs = list(lib_to_files.keys())
+            
+        graph, _ = get_dep_graph_data(root_pkgs)
+        return json.dumps(graph, indent=2)
+    except Exception as e:
+        return f"Error getting dependency graph: {str(e)}"
+
+
+@registry.register(
+    name="check_dependency_integrity",
+    description="Check for 'bloat' (declared but unused) or 'undeclared' (used but missing from pyproject.toml) dependencies."
+)
+def check_dependency_integrity(directory: str = ".") -> str:
+    """Check for unused or undeclared dependencies."""
+    try:
+        from sarathi.cli.sbom_cli import get_integrity_report
+        results = get_integrity_report(directory)
+        if not results:
+            return "Could not generate integrity report (maybe pyproject.toml is missing)."
+        return json.dumps(results, indent=2)
+    except Exception as e:
+        return f"Error checking dependency integrity: {str(e)}"
+
+
+@registry.register(
+    name="get_package_dependents",
+    description="Find which other installed packages depend on a specific package (Reverse Dependency search). Useful for vulnerability impact analysis."
+)
+def get_package_dependents(package_name: str) -> str:
+    """Find apps/libs requiring the given package."""
+    try:
+        from sarathi.cli.sbom_cli import get_reverse_deps
+        dependents = get_reverse_deps(package_name)
+        return json.dumps(dependents, indent=2)
+    except Exception as e:
+        return f"Error finding package dependents: {str(e)}"

@@ -10,6 +10,10 @@ from sarathi.llm.agent_engine import AgentEngine
 from sarathi.llm.tool_library import registry
 from sarathi.utils.formatters import format_green, format_code, format_cyan, format_yellow, format_bold
 from sarathi.cli.banner import print_banner
+from rich.console import Console
+from rich.markdown import Markdown
+
+console = Console()
 
 class ChatSession:
     def __init__(self, agent_name="chat"):
@@ -197,7 +201,8 @@ class ChatSession:
                 print(f"\n{format_green('Sarathi is thinking...')}")
                 
                 response = self.process_input(user_input)
-                print(f"\n{response}\n")
+                console.print(Markdown(response))
+                print()
 
             except KeyboardInterrupt:
                 print("\nType '/exit' to quit.")
@@ -205,7 +210,7 @@ class ChatSession:
                 self.running = False
                 print("\nGoodbye!")
             except Exception as e:
-                print(f"\nError: {e}")
+                console.print(f"\n[red]Error:[/red] {e}")
 
     def handle_slash_command(self, command):
         cmd = command.split()[0].lower()
@@ -250,6 +255,6 @@ def execute_cmd(args):
     if getattr(args, "question", None):
         print(f"\n{format_green('Sarathi is thinking...')}")
         response = session.process_input(args.question)
-        print(f"\n{response}\n")
+        console.print(Markdown(response))
     else:
         session.start()

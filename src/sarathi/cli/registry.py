@@ -69,4 +69,10 @@ CLI_REGISTRY = {
         "handler": "execute_cmd",
         "custom_setup": True,
     },
+    "sbom": {
+        "help": "Software Bill of Materials (SBOM) tools",
+        "module": "sarathi.cli.sbom_cli",
+        "handler": "execute_cmd",
+        "custom_setup": True,
+    },
 }

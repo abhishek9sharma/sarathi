@@ -84,38 +84,55 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     }
 
     response = None
-    start_time = time.time()
-    try:
-        response = requests.post(
-            url, 
-            headers=headers, 
-            json=body, 
-            timeout=config.get("core.timeout", 30),
-            verify=config.get("core.verify_ssl", True)
-        )
-        response.raise_for_status()
-        end_time = time.time()
-        
-        data = response.json()
-        
-        # Record usage
-        usage = data.get("usage")
-        usage_tracker.record_call(end_time - start_time, usage)
+    max_retries = config.get("core.llm_retries", 3)
+    retry_delay = 2
+    
+    for attempt in range(max_retries + 1):
+        try:
+            start_time = time.time()
+            response = requests.post(
+                url, 
+                headers=headers, 
+                json=body, 
+                timeout=config.get("core.timeout", 30),
+                verify=config.get("core.verify_ssl", True)
+            )
+            
+            if response.status_code == 429:
+                if attempt < max_retries:
+                    print(f"⚠️  Rate limited (429). Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
+            
+            response.raise_for_status()
+            end_time = time.time()
+            
+            data = response.json()
+            
+            # Record usage
+            usage = data.get("usage")
+            usage_tracker.record_call(end_time - start_time, usage)
 
-        if resp_type == "text":
-            choices = data.get("choices", [])
-            if not choices:
-                return "Error: No response from LLM provider."
-            content = choices[0].get("message", {}).get("content", "Error: No content in LLM response.")
-            return clean_llm_response(content)
-        return data
+            if resp_type == "text":
+                choices = data.get("choices", [])
+                if not choices:
+                    return "Error: No response from LLM provider."
+                content = choices[0].get("message", {}).get("content", "Error: No content in LLM response.")
+                return clean_llm_response(content)
+            return data
 
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling LLM: {e}")
-        if response is not None:
-            # Try to print body if available, but it might not be text
-            try:
-                print(f"Response: {response.text}")
-            except:
-                pass
-        return {"Error": f"LLM Call Failed: {e}"}
+        except requests.exceptions.RequestException as e:
+            if attempt < max_retries:
+                print(f"⚠️  LLM call failed: {e}. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+                retry_delay *= 2
+                continue
+                
+            print(f"❌ Error calling LLM after {max_retries} retries: {e}")
+            if response is not None:
+                try:
+                    print(f"Response: {response.text}")
+                except:
+                    pass
+            return {"Error": f"LLM Call Failed after retries: {e}"}

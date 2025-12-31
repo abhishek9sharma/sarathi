@@ -24,8 +24,9 @@ dependencies = [
     "astor",
     "black",
     "PyYAML",
-    "aiohttp",
+    "aiohttp>=3.10.11",
     "questionary",
+    "rich",
 ]
 
 [project.optional-dependencies]
