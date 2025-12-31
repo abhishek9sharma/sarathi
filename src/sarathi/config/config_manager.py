@@ -248,6 +248,63 @@ class ConfigManager:
     def get_provider_config(self, provider_name):
         return self._config.get("providers", {}).get(provider_name, {})
 
+    def set(self, key_path, value, save=True):
+        """Set a value using dot notation and optionally save to file."""
+        keys = key_path.split(".")
+        curr = self._config
+        for k in keys[:-1]:
+            if k not in curr or not isinstance(curr[k], dict):
+                curr[k] = {}
+            curr = curr[k]
+        curr[keys[-1]] = value
+
+        if save:
+            self.save_to_file()
+
+    def update_agent_model(self, agent_name, model_name, save=True):
+        """Shortcut to update an agent's model."""
+        if "agents" not in self._config:
+            self._config["agents"] = {}
+        if agent_name not in self._config["agents"]:
+            self._config["agents"][agent_name] = {}
+        self._config["agents"][agent_name]["model"] = model_name
+        
+        if save:
+            self.save_to_file()
+
+    def save_to_file(self, path=None):
+        """Saves current configuration to a file. 
+        Defaults to local sarathi.yaml if it exists, otherwise global config.
+        """
+        if not path:
+            local_path = Path("sarathi.yaml")
+            if local_path.exists():
+                path = local_path
+            else:
+                path = Path.home() / ".sarathi" / "config.yaml"
+
+        # Ensure directory exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        merged_config = copy.deepcopy(self._config)
+        
+        # Remove runtime-only secrets if any (though api_key is usually env only per our _merge_from_file)
+        if "providers" in merged_config:
+            for p in merged_config["providers"].values():
+                p.pop("api_key", None)
+
+        def str_presenter(dumper, data):
+            if len(data.splitlines()) > 1:
+                return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
+            return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+
+        yaml.add_representer(str, str_presenter)
+
+        with open(path, "w") as f:
+            yaml.dump(merged_config, f, default_flow_style=False, sort_keys=False, Dumper=yaml.Dumper)
+        
+        print(f"Configuration saved to {path}")
+
 
 # Singleton instance
 config = ConfigManager()

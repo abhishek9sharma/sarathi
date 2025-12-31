@@ -33,7 +33,8 @@ class AsyncLLMClient:
         """Get or create an aiohttp session with connection pooling."""
         if self._session is None or self._session.closed:
             timeout = aiohttp.ClientTimeout(total=config.get("core.timeout", 30))
-            connector = aiohttp.TCPConnector(limit=10)  # Connection pool
+            verify_ssl = config.get("core.verify_ssl", True)
+            connector = aiohttp.TCPConnector(limit=10, ssl=verify_ssl)  # Connection pool
             self._session = aiohttp.ClientSession(
                 timeout=timeout,
                 connector=connector

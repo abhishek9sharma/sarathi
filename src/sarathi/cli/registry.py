@@ -74,4 +74,10 @@ CLI_REGISTRY = {
         "handler": "execute_cmd",
         "custom_setup": True,
     },
+    "model": {
+        "help": "Switch LLM models",
+        "module": "sarathi.cli.model_cli",
+        "handler": "execute_cmd",
+        "custom_setup": True,
+    },
 }

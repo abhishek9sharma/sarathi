@@ -24,6 +24,11 @@ def setup_args(subparsers, opname="config"):
     
     info_parser = sub.add_parser("info", help="Show information about loaded configuration files")
 
+    set_parser = sub.add_parser("set", help="Set a configuration value")
+    set_parser.add_argument("key", help="Configuration key (dot notation, e.g., core.timeout)")
+    set_parser.add_argument("value", help="Value to set")
+    set_parser.add_argument("--no-save", action="store_true", help="Do not save to file")
+
 
 def execute_cmd(args):
     if args.config_op == "init":
@@ -37,8 +42,26 @@ def execute_cmd(args):
                 print(f"  - {file_path}")
         else:
             print("  - Defaults (no config files loaded)")
+    elif args.config_op == "set":
+        val = args.value
+        # Attempt to parse as int/float/bool if possible
+        if val.lower() == "true":
+            val = True
+        elif val.lower() == "false":
+            val = False
+        else:
+            try:
+                if "." in val:
+                    val = float(val)
+                else:
+                    val = int(val)
+            except ValueError:
+                pass
+        
+        config.set(args.key, val, save=not args.no_save)
+        print(f"Set {args.key} = {val}")
     else:
-        print("Use 'sarathi config init', 'sarathi config show', or 'sarathi config info'")
+        print("Use 'sarathi config init', 'sarathi config show', 'sarathi config info', or 'sarathi config set'")
 
 
 def create_config(custom_path=None):

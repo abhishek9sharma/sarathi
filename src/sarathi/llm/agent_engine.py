@@ -116,7 +116,13 @@ class AgentEngine:
             del body["tools"]
 
         start_time = time.time()
-        res = requests.post(url, headers=headers, json=body, timeout=config.get("core.timeout", 30))
+        res = requests.post(
+            url, 
+            headers=headers, 
+            json=body, 
+            timeout=config.get("core.timeout", 30),
+            verify=config.get("core.verify_ssl", True)
+        )
         res.raise_for_status()
         end_time = time.time()
         

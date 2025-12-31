@@ -82,7 +82,7 @@ class ChatSession:
 
     def _completer(self, text, state):
         """Readline completer for @mentions and slash commands."""
-        cmds = ["/exit", "/quit", "/clear", "/history", "/reindex"]
+        cmds = ["/exit", "/quit", "/clear", "/history", "/reindex", "/model"]
         
         if text.startswith("@"):
             query = text[1:]
@@ -210,6 +210,18 @@ class ChatSession:
                 if not content and msg.get("tool_calls"):
                     content_preview = f"<{len(msg['tool_calls'])} tool calls>"
                 print(f"[{role}]: {content_preview}")
+        elif cmd == "/model":
+            parts = command.split()
+            if len(parts) > 1:
+                new_model = parts[1]
+                from sarathi.config.config_manager import config
+                config.update_agent_model("chat", new_model, save=False)
+                print(f"Model for this chat session switched to: {new_model}")
+            else:
+                from sarathi.config.config_manager import config
+                current_model = config.get("agents.chat.model")
+                print(f"Current model: {current_model}")
+                print("Usage: /model <model_name>")
         else:
             print(f"Unknown command: {cmd}")
 

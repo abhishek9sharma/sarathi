@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from sarathi.llm.call_llm import call_llm_model, get_agent_config
+from sarathi.llm.agent_engine import AgentEngine
 from sarathi.config.config_manager import ConfigManager
 
 # Mock ConfigManager to return predictable results
@@ -81,3 +82,30 @@ def test_call_llm_failure(mock_post, mock_config):
     assert isinstance(result, dict)
     assert "Error" in result
     assert "Connection Error" in result["Error"]
+
+@patch("requests.post")
+def test_llm_respects_verify_ssl(mock_post, mock_config):
+    mock_config.get.side_effect = lambda key, default=None: False if key == "core.verify_ssl" else (30 if key == "core.timeout" else default)
+    
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+    mock_post.return_value = mock_response
+    
+    call_llm_model({"model": "test"}, "hi")
+    
+    _, kwargs = mock_post.call_args
+    assert kwargs["verify"] is False
+
+@patch("requests.post")
+def test_agent_engine_respects_verify_ssl(mock_post, mock_config):
+    mock_config.get.side_effect = lambda key, default=None: False if key == "core.verify_ssl" else (30 if key == "core.timeout" else default)
+    
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+    mock_post.return_value = mock_response
+    
+    agent = AgentEngine("chat", system_prompt="test")
+    agent._call_llm()
+    
+    _, kwargs = mock_post.call_args
+    assert kwargs["verify"] is False

@@ -40,12 +40,27 @@ Sarathi resolves configuration in the following order (lower items override high
 2. **Global Config**: `~/.sarathi/config.yaml` (or the file specified via `--config`).
 3. **Environment Variables**: For secrets and quick overrides (e.g., `OPENAI_API_KEY`).
 
-To see your current active configuration:
+### 4. Update Configuration from CLI
+You can update configuration values directly from the terminal. This will persist settings to your active configuration file (local `sarathi.yaml` or global `~/.sarathi/config.yaml`).
+
 ```bash
-sarathi config show
+sarathi config set core.verify_ssl False
+sarathi config set core.timeout 60
 ```
 
-### 3. Set API Keys (Environment Variable Only)
+To update a value without saving it to the config file (current session only):
+```bash
+sarathi config set core.timeout 10 --no-save
+```
+
+### 5. Air-Gapped / Private Environments
+If you are running Sarathi in an environment with private LLM endpoints (like a local Ollama or corporate proxy) that uses self-signed certificates, you can disable SSL verification:
+
+```bash
+sarathi config set core.verify_ssl False
+```
+
+### 6. Set API Keys (Environment Variable Only)
 For security, API keys **cannot** be stored in the config file. You must export them in your shell:
 
 **For OpenAI:**
@@ -92,11 +107,32 @@ You can ask general coding questions to the assistant:
 
 - Run `sarathi ask -q "How do I reverse a list in Python?"`
 
+#### Interactive Chat Mode
+Start a persistent, interactive session where the assistant can help you edit code, run tests, and answer complex queries.
+
+- Run `sarathi chat`
+
+Inside the chat, you can use **Slash Commands**:
+- `/exit`: Quit the session
+- `/clear`: Reset conversation context
+- `/model <name>`: Switch the LLM model for the current session
+- `/reindex`: Refresh the project file index for `@filename` completions
+
+#### Model Switching
+Quickly change or view the LLM model used by Sarathi:
+
+- View current models: `sarathi model`
+- Change globally for all agents: `sarathi model gpt-4o`
+- Change for a specific agent: `sarathi model claude-3-5-sonnet --agent code_editor`
+- Temporary change (no save): `sarathi model llama3 --no-save`
+
 
 ## Recent Changes
-- **Python 3.12+ Compatibility**: Fixed `ast.Str` deprecation/removal issues.
-- **Global Configuration**: Added support for user-wide configuration in `~/.sarathi/config.yaml`.
-- **Config Management**: New `sarathi config show` and `sarathi config init --global` commands.
+- **Interactive Chat Mode**: Added a powerful `/chat` mode with tool support, project indexing, and slash commands.
+- **Dynamic Configuration**: New `sarathi config set` command to update settings from CLI.
+- **Model Switching**: Added `sarathi model` command and `/model` chat command to switch LLMs on the fly.
+- **Air-Gapped Support**: Added `core.verify_ssl` toggle to support environments with private/self-signed certificates.
+- **Persistence**: Configuration updates are now preserved with proper YAML formatting.
 
 ## Helpful references
     - https://dev.to/taikedz/ive-parked-my-side-projects-3o62

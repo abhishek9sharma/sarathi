@@ -69,3 +69,16 @@ def test_env_var_overrides(clean_env):
     # Model should update agents
     assert cm.get("agents.commit_generator.model") == "env-model"
     assert cm.get("agents.qahelper.model") == "env-model"
+
+def test_config_manager_set_and_save():
+    with patch("builtins.open", mock_open()) as mock_file:
+        with patch("pathlib.Path.exists", return_value=True):
+            cm = ConfigManager()
+            cm.set("core.verify_ssl", False, save=True)
+            assert cm.get("core.verify_ssl") is False
+            mock_file.assert_called()
+
+def test_config_manager_update_agent_model():
+    cm = ConfigManager()
+    cm.update_agent_model("chat", "gpt-4o", save=False)
+    assert cm.get("agents.chat.model") == "gpt-4o"

@@ -86,7 +86,11 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     start_time = time.time()
     try:
         response = requests.post(
-            url, headers=headers, json=body, timeout=config.get("core.timeout", 30)
+            url, 
+            headers=headers, 
+            json=body, 
+            timeout=config.get("core.timeout", 30),
+            verify=config.get("core.verify_ssl", True)
         )
         response.raise_for_status()
         end_time = time.time()
