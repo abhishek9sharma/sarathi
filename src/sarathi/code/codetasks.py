@@ -4,7 +4,6 @@ import subprocess
 import astor
 
 from sarathi.llm.call_llm import call_llm_model
-from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.formatters import format_code
 
 
@@ -43,7 +42,7 @@ class CodeTransformer:
         """
         methods = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 methods.append(node)
         return methods
 
@@ -83,7 +82,7 @@ class CodeTransformer:
                 if existing_docstring:
                     if overwrite_existing:
                         new_docstring = call_llm_model(
-                            prompt_info=prompt_dict[self.dosctring_prompt],
+                            prompt_info={},
                             user_msg=existing_method_code,
                             resp_type="text",
                             agent_name=self.dosctring_prompt,
@@ -96,7 +95,7 @@ class CodeTransformer:
                         pass
                 else:
                     new_docstring = call_llm_model(
-                        prompt_info=prompt_dict[self.dosctring_prompt],
+                        prompt_info={},
                         user_msg=existing_method_code,
                         resp_type="text",
                         agent_name=self.dosctring_prompt,

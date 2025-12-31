@@ -4,6 +4,7 @@ import sys
 
 from sarathi.cli.registry import CLI_REGISTRY
 from sarathi.utils.io import is_valid_directory, is_valid_file
+from sarathi.cli.banner import print_banner
 
 # Map string type names to actual functions if needed
 TYPE_MAP = {
@@ -23,6 +24,9 @@ def parse_cmd_args():
     parser = argparse.ArgumentParser(description="Sarathi - AI Coding Assistant")
     parser.add_argument(
         "--config", "-c", help="Path to a custom configuration YAML file"
+    )
+    parser.add_argument(
+        "--debug", "-v", action="store_true", help="Enable verbose debug logging"
     )
     subparsers = parser.add_subparsers(dest="op")
 
@@ -48,38 +52,30 @@ def parse_cmd_args():
     return parser.parse_args()
 
 
-BANNER = r"""
-   ____                  _   _     _ 
-  / ___|  __ _ _ __ __ _| |_| |__ (_)
-  \___ \ / _` | '__/ _` | __| '_ \| |
-   ___) | (_| | | | (_| | |_| | | | |
-  |____/ \__,_|_|  \__,_|\__|_| |_|_|
-                                     
-  AI Coding Assistant
-"""
 
-def print_banner():
-    print(BANNER)
-
-def check_config_nudge():
+def check_config_nudge(skip_banner=False):
     from pathlib import Path
     import os
     from sarathi.config.config_manager import config
     
-    config_path = Path.home() / ".sarathi" / "config.yaml"
+    global_config_path = Path.home() / ".sarathi" / "config.yaml"
+    local_config_path = Path("sarathi.yaml")
     
-    # 1. If no config, show banner and nudge
-    if not config_path.exists():
-        print_banner()
-        print("\033[93mTip: Welcome! Run 'sarathi config init' to set up your LLM configuration.\033[0m")
+    # 1. If no config (neither global nor local), show banner and nudge
+    if not global_config_path.exists() and not local_config_path.exists():
+        if not skip_banner:
+            print_banner()
+        print("\033[93mTip: No configuration found (~/.sarathi/config.yaml or sarathi.yaml). Run 'sarathi config init' to get started.\033[0m")
         print("-" * 50)
         return True # Showed something
     
-    # 2. If config exists but key missing, just show the warning (no banner)
+    # 2. If config exists but key missing, ensure banner and warning
     active_provider = config.get("core.provider")
     if active_provider == "openai":
         api_key = os.getenv("SARATHI_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not api_key:
+            if not skip_banner:
+                print_banner()
             print("\033[93mTip: OpenAI is active but OPENAI_API_KEY is not set.\033[0m")
             print("-" * 50)
             return True # Showed something
@@ -94,16 +90,23 @@ def main():
         # Load custom config if provided
         if parsed_args.config:
             config.load_configs(parsed_args.config)
+        
+        if parsed_args.debug:
+            config.set("core.debug", True, save=False)
 
         # Logic for banner and nudges
         displayed_nudge = False
-        if parsed_args.op != "config":
+        if parsed_args.op != "config" and parsed_args.op is not None:
              displayed_nudge = check_config_nudge()
 
         if not parsed_args.op:
-            # Only print banner here if nudge didn't already print it
-            if not displayed_nudge:
-                print_banner()
+            # Always print banner and nudge logic for the root command
+            print_banner()
+            if not check_config_nudge(skip_banner=True):
+                # Default nudge when everything is fine but banner is shown
+                print("\033[94mTip: Sarathi is configured and ready. Try 'sarathi chat' or 'sarathi git autocommit'.\033[0m")
+                print("-" * 50)
+            
             print("No command specified. Use --help to see available commands.")
             return
 
@@ -117,3 +120,12 @@ def main():
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+    finally:
+        from sarathi.utils.usage import usage_tracker
+        summary = usage_tracker.get_summary()
+        if summary:
+            print(summary)
+
+
+# if __name__ == "__main__":
+#     main()

@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from sarathi.llm.call_llm import call_llm_model, get_agent_config
+from sarathi.llm.agent_engine import AgentEngine
 from sarathi.config.config_manager import ConfigManager
 
 # Mock ConfigManager to return predictable results
@@ -10,7 +11,9 @@ def mock_config():
         # Default behavior
         mock.get_agent_config.return_value = {}
         mock.get_provider_config.return_value = {"base_url": "https://api.openai.com/v1", "api_key": "test_key"}
-        mock.get.return_value = 30 # Timeout
+        
+        # Make .get() return 30 for timeout, but None for others (like prompts)
+        mock.get.side_effect = lambda key, default=None: 30 if key == "core.timeout" else default
         yield mock
 
 def test_get_agent_config(mock_config):
@@ -20,8 +23,8 @@ def test_get_agent_config(mock_config):
     mock_config.get_agent_config.assert_called_with("commit_generator")
     
     # Test normal lookup
-    assert get_agent_config("qahelper") == {"model": "legacy_model"}
-    mock_config.get_agent_config.assert_called_with("qahelper")
+    assert get_agent_config("chat") == {"model": "legacy_model"}
+    mock_config.get_agent_config.assert_called_with("chat")
 
 @patch("requests.post")
 def test_call_llm_success_text(mock_post, mock_config):
@@ -35,7 +38,7 @@ def test_call_llm_success_text(mock_post, mock_config):
     prompt_info = {"model": "default-model", "system_msg": "You are helpful"}
     
     # Call function
-    result = call_llm_model(prompt_info, "Hi", resp_type="text", agent_name="qahelper")
+    result = call_llm_model(prompt_info, "Hi", resp_type="text", agent_name="chat")
     
     assert result == "Hello World"
     
@@ -79,3 +82,30 @@ def test_call_llm_failure(mock_post, mock_config):
     assert isinstance(result, dict)
     assert "Error" in result
     assert "Connection Error" in result["Error"]
+
+@patch("requests.post")
+def test_llm_respects_verify_ssl(mock_post, mock_config):
+    mock_config.get.side_effect = lambda key, default=None: False if key == "core.verify_ssl" else (30 if key == "core.timeout" else default)
+    
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+    mock_post.return_value = mock_response
+    
+    call_llm_model({"model": "test"}, "hi")
+    
+    _, kwargs = mock_post.call_args
+    assert kwargs["verify"] is False
+
+@patch("requests.post")
+def test_agent_engine_respects_verify_ssl(mock_post, mock_config):
+    mock_config.get.side_effect = lambda key, default=None: False if key == "core.verify_ssl" else (30 if key == "core.timeout" else default)
+    
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+    mock_post.return_value = mock_response
+    
+    agent = AgentEngine("chat", system_prompt="test")
+    agent._call_llm()
+    
+    _, kwargs = mock_post.call_args
+    assert kwargs["verify"] is False

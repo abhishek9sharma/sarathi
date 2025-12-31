@@ -1,6 +1,9 @@
+import time
 import requests
 
 from sarathi.config.config_manager import config
+from sarathi.utils.usage import usage_tracker
+from sarathi.utils.formatters import clean_llm_response
 
 
 def get_agent_config(agent_name):
@@ -38,8 +41,10 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     provider_name = agent_conf.get("provider", "openai")
     provider_conf = config.get_provider_config(provider_name)
 
-    # System Prompt (Config Override > Prompt Info)
+    # System Prompt (Agent Config > Prompts Section > Prompt Info Legacy)
     system_msg = agent_conf.get("system_prompt")
+    if not system_msg:
+        system_msg = config.get(f"prompts.{agent_name}")
     if not system_msg:
         system_msg = prompt_info.get("system_msg", "")
 
@@ -79,15 +84,31 @@ def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     }
 
     response = None
+    start_time = time.time()
     try:
         response = requests.post(
-            url, headers=headers, json=body, timeout=config.get("core.timeout", 30)
+            url, 
+            headers=headers, 
+            json=body, 
+            timeout=config.get("core.timeout", 30),
+            verify=config.get("core.verify_ssl", True)
         )
         response.raise_for_status()
+        end_time = time.time()
+        
+        data = response.json()
+        
+        # Record usage
+        usage = data.get("usage")
+        usage_tracker.record_call(end_time - start_time, usage)
 
         if resp_type == "text":
-            return response.json()["choices"][0]["message"]["content"]
-        return response.json()
+            choices = data.get("choices", [])
+            if not choices:
+                return "Error: No response from LLM provider."
+            content = choices[0].get("message", {}).get("content", "Error: No content in LLM response.")
+            return clean_llm_response(content)
+        return data
 
     except requests.exceptions.RequestException as e:
         print(f"Error calling LLM: {e}")

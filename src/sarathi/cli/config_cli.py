@@ -7,7 +7,6 @@ from pathlib import Path
 import yaml
 
 from sarathi.config.config_manager import DEFAULT_CONFIG, config
-from sarathi.llm.prompts import prompt_dict
 
 
 def setup_args(subparsers, opname="config"):
@@ -22,6 +21,13 @@ def setup_args(subparsers, opname="config"):
     )
 
     show_parser = sub.add_parser("show", help="Show the current active configuration")
+    
+    info_parser = sub.add_parser("info", help="Show information about loaded configuration files")
+
+    set_parser = sub.add_parser("set", help="Set a configuration value")
+    set_parser.add_argument("key", help="Configuration key (dot notation, e.g., core.timeout)")
+    set_parser.add_argument("value", help="Value to set")
+    set_parser.add_argument("--no-save", action="store_true", help="Do not save to file")
 
 
 def execute_cmd(args):
@@ -29,8 +35,33 @@ def execute_cmd(args):
         create_config(args.path)
     elif args.config_op == "show":
         print(yaml.dump(config._config, default_flow_style=False))
+    elif args.config_op == "info":
+        print("Active Configuration Sources:")
+        if config._loaded_files:
+            for file_path in config._loaded_files:
+                print(f"  - {file_path}")
+        else:
+            print("  - Defaults (no config files loaded)")
+    elif args.config_op == "set":
+        val = args.value
+        # Attempt to parse as int/float/bool if possible
+        if val.lower() == "true":
+            val = True
+        elif val.lower() == "false":
+            val = False
+        else:
+            try:
+                if "." in val:
+                    val = float(val)
+                else:
+                    val = int(val)
+            except ValueError:
+                pass
+        
+        config.set(args.key, val, save=not args.no_save)
+        print(f"Set {args.key} = {val}")
     else:
-        print("Use 'sarathi config init' or 'sarathi config show'")
+        print("Use 'sarathi config init', 'sarathi config show', 'sarathi config info', or 'sarathi config set'")
 
 
 def create_config(custom_path=None):
@@ -49,20 +80,6 @@ def create_config(custom_path=None):
 
     # Create an expanded config with prompts for the user file
     full_config = copy.deepcopy(DEFAULT_CONFIG)
-
-    # Map agent names to keys in prompt_dict
-    prompt_map = {
-        "commit_generator": "autocommit",
-        "qahelper": "qahelper",
-        "update_docstrings": "update_docstrings",
-    }
-
-    for agent_name, prompt_key in prompt_map.items():
-        if agent_name in full_config.get("agents", {}):
-            if prompt_key in prompt_dict:
-                raw_prompt = prompt_dict[prompt_key]["system_msg"]
-                # Clean up the prompt formatting so it looks nice in YAML
-                full_config["agents"][agent_name]["system_prompt"] = textwrap.dedent(raw_prompt).strip()
 
     # Security: Ensure we don't dump None-keys that we removed
     if "providers" in full_config:
