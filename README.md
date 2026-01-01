@@ -8,7 +8,7 @@ You can install the package using below command. Make sure you have Python and p
 
 ## Quickstart
 
-[![sarathi](https://github.com/user-attachments/assets/f1581b80-ec10-4c1c-b4b7-60e90eaa3f37)
+[![sarathi]](https://github.com/user-attachments/assets/f1581b80-ec10-4c1c-b4b7-60e90eaa3f37)
 
 ## Configuration
 
