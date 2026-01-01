@@ -110,7 +110,8 @@ Your capabilities:
 - Explaining code
 - Editing code and generating tests (using available tools)
 - Executing terminal commands
-- Analyzing project structure
+- Analyzing project structure and SBOM (Software Bill of Materials)
+- Analyzing dependencies, licenses, and vulnerability impact using SBOM tools
 
 Guidelines:
 - You are in a persistent conversation. Remember previous context.
@@ -120,7 +121,7 @@ Guidelines:
 - If asked to "clear", "exit", or "quit", the user is using slash commands, but you should acknowledge them if they slip through.
 - When running commands, ensure they are safe.
 
-Current Directory: {current_dir}"""
+Current Directory: {current_dir}""",
     },
     "agents": {
         "commit_generator": {
@@ -147,6 +148,7 @@ Current Directory: {current_dir}"""
 
 
 import copy
+
 
 class ConfigManager:
     def __init__(self):
@@ -262,12 +264,12 @@ class ConfigManager:
         if agent_name not in self._config["agents"]:
             self._config["agents"][agent_name] = {}
         self._config["agents"][agent_name]["model"] = model_name
-        
+
         if save:
             self.save_to_file()
 
     def save_to_file(self, path=None):
-        """Saves current configuration to a file. 
+        """Saves current configuration to a file.
         Defaults to local sarathi.yaml if it exists, otherwise global config.
         """
         if not path:
@@ -281,7 +283,7 @@ class ConfigManager:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         merged_config = copy.deepcopy(self._config)
-        
+
         # Remove runtime-only secrets if any (though api_key is usually env only per our _merge_from_file)
         if "providers" in merged_config:
             for p in merged_config["providers"].values():
@@ -289,14 +291,20 @@ class ConfigManager:
 
         def str_presenter(dumper, data):
             if len(data.splitlines()) > 1:
-                return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-            return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+                return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
         yaml.add_representer(str, str_presenter)
 
         with open(path, "w") as f:
-            yaml.dump(merged_config, f, default_flow_style=False, sort_keys=False, Dumper=yaml.Dumper)
-        
+            yaml.dump(
+                merged_config,
+                f,
+                default_flow_style=False,
+                sort_keys=False,
+                Dumper=yaml.Dumper,
+            )
+
         print(f"Configuration saved to {path}")
 
 

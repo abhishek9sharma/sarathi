@@ -2,41 +2,62 @@
 
 # Variables
 VENV_DIR = .venv
-PYTHON = $(VENV_DIR)/bin/python
-PIP = $(VENV_DIR)/bin/pip
+UV := $(shell command -v uv 2> /dev/null)
+
+# Logic to use uv for faster execution/installation if available
+ifneq ($(UV),)
+    PYTHON_CMD = uv run python
+    PIP_CMD = uv pip install --python $(VENV_DIR)
+    VENV_CMD = uv venv
+else
+    PYTHON_CMD = $(VENV_DIR)/bin/python
+    PIP_CMD = $(VENV_DIR)/bin/pip install
+    VENV_CMD = python3 -m venv
+endif
+
 PYTEST = $(VENV_DIR)/bin/pytest
+BLACK = $(VENV_DIR)/bin/black
+ISORT = $(VENV_DIR)/bin/isort
 
 help:
 	@echo "Sarathi - Makefile Commands"
 	@echo "============================"
 	@echo "make venv      - Create a virtual environment"
-	@echo "make install   - Install dependencies in venv"
-	@echo "make test      - Run tests in venv"
-	@echo "make format    - Format code with black and isort"
-	@echo "make clean     - Remove build artifacts and venv"
-	@echo "make build     - Clean, create venv, install deps, and run tests"
+	@echo "make install   - Install dependencies (uses uv if available)"
+	@echo "make test      - Run tests"
+	@echo "make coverage  - Run tests and generate coverage report"
+	@echo "make format    - Format code"
+	@echo "make clean     - Remove artifacts"
+	@echo "make build     - Full clean, install, and test cycle"
 
 venv:
 	@echo "Creating virtual environment..."
-	python3 -m venv $(VENV_DIR)
-	@echo "Virtual environment created at $(VENV_DIR)"
+	$(VENV_CMD) $(VENV_DIR)
 
 install: venv
 	@echo "Installing dependencies..."
-	$(PIP) install --upgrade pip
-	$(PIP) install -e .[dev]
-	@echo "Dependencies installed"
+ifneq ($(UV),)
+	@echo "Using system uv..."
+	$(PIP_CMD) -e .[dev]
+else
+	@echo "System uv not found. Installing uv in venv for faster setup..."
+	$(VENV_DIR)/bin/pip install uv
+	$(VENV_DIR)/bin/uv pip install -e .[dev]
+endif
 
-test: install
+test:
 	@echo "Running tests..."
-	PYTHONPATH=src $(PYTEST) tests/ -v
-	@echo "Tests completed"
+	$(PYTHON_CMD) -m pytest tests/ -v
+
+coverage:
+	@echo "Running tests with coverage..."
+	$(PYTHON_CMD) -m pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=50 tests/
 
 format:
 	@echo "Formatting code..."
-	black src/ tests/
-	isort src/ tests/
-	@echo "Code formatted"
+	$(PYTHON_CMD) -m black src/ tests/
+	$(PYTHON_CMD) -m isort src/ tests/
+	@echo "Formatting complete"
 
 clean:
 	@echo "Cleaning up..."
@@ -50,6 +71,5 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	@echo "Cleanup complete"
-
-build: clean venv install test
-	@echo "Build complete! All tests passed."
+build: clean install test
+	@echo "Build complete!"

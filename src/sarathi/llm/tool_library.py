@@ -4,23 +4,54 @@ Enhanced tool library for code editing agents.
 Provides tools for file operations, code analysis, AST parsing,
 command execution, and test generation.
 """
-import subprocess
-import os
+
 import ast
 import json
+import os
+import subprocess
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
 from sarathi.llm.tools import registry
+
+# --- Security Helpers ---
+
+
+def _is_safe_path(filepath: str) -> bool:
+    """Check if a path is safe to access (no .env files)."""
+    filename = os.path.basename(filepath)
+    if ".env" in filename or ".env" in filepath:
+        return False
+    return True
+
+
+def _is_safe_command(command: str) -> bool:
+    """Check if a command is safe to run (no env-related commands)."""
+    forbidden = ["env", "printenv", ".env", "export", "set", "unset"]
+    cmd_lower = command.lower()
+
+    # Check for forbidden keywords as whole words to avoid false positives
+    import re
+
+    for word in forbidden:
+        if re.search(rf"\b{re.escape(word)}\b", cmd_lower):
+            return False
+    return True
 
 
 # --- File System Tools ---
 
+
 @registry.register(
     name="read_file",
-    description="Read the complete contents of a file. Returns the file content as a string."
+    description="Read the complete contents of a file. Returns the file content as a string.",
 )
 def read_file(filepath: str) -> str:
     """Read file contents."""
+    if not _is_safe_path(filepath):
+        return (
+            "Error: Access to .env files is strictly prohibited for security reasons."
+        )
     try:
         with open(filepath, "r") as f:
             return f.read()
@@ -30,10 +61,14 @@ def read_file(filepath: str) -> str:
 
 @registry.register(
     name="write_file",
-    description="Write content to a file. Creates the file if it doesn't exist, overwrites if it does."
+    description="Write content to a file. Creates the file if it doesn't exist, overwrites if it does.",
 )
 def write_file(filepath: str, content: str) -> str:
     """Write content to a file."""
+    if not _is_safe_path(filepath):
+        return (
+            "Error: Access to .env files is strictly prohibited for security reasons."
+        )
     try:
         # Create parent directories if needed
         Path(filepath).parent.mkdir(parents=True, exist_ok=True)
@@ -46,14 +81,14 @@ def write_file(filepath: str, content: str) -> str:
 
 @registry.register(
     name="list_files",
-    description="List all files in a directory. Returns a JSON array of filenames."
+    description="List all files in a directory. Returns a JSON array of filenames.",
 )
 def list_files(directory: str = ".") -> str:
     """List files in a directory."""
     try:
         if not os.path.isdir(directory):
             return f"Error listing files: Directory {directory} does not exist."
-        files = os.listdir(directory)
+        files = [f for f in os.listdir(directory) if _is_safe_path(f)]
         return json.dumps(files)
     except Exception as e:
         return f"Error listing files: {str(e)}"
@@ -61,7 +96,7 @@ def list_files(directory: str = ".") -> str:
 
 @registry.register(
     name="find_python_files",
-    description="Recursively find all Python files in a directory. Returns paths relative to the directory."
+    description="Recursively find all Python files in a directory. Returns paths relative to the directory.",
 )
 def find_python_files(directory: str = ".") -> str:
     """Find all Python files in directory tree."""
@@ -71,9 +106,14 @@ def find_python_files(directory: str = ".") -> str:
         py_files = []
         for root, dirs, files in os.walk(directory):
             # Skip common directories
-            dirs[:] = [d for d in dirs if d not in ['.git', '__pycache__', 'venv', '.venv', 'node_modules']]
+            dirs[:] = [
+                d
+                for d in dirs
+                if d not in [".git", "__pycache__", "venv", ".venv", "node_modules"]
+                and _is_safe_path(d)
+            ]
             for file in files:
-                if file.endswith('.py'):
+                if file.endswith(".py") and _is_safe_path(file):
                     rel_path = os.path.relpath(os.path.join(root, file), directory)
                     py_files.append(rel_path)
         return json.dumps(py_files)
@@ -83,66 +123,66 @@ def find_python_files(directory: str = ".") -> str:
 
 # --- Git Tools ---
 
+
 @registry.register(
-    name="get_git_diff",
-    description="Get staged changes in the current git repository."
+    name="get_git_diff", description="Get staged changes in the current git repository."
 )
 def get_git_diff() -> str:
     """Get git diff for staged changes."""
+    # Exclude .env files from diff
     result = subprocess.run(
-        ["git", "diff", "--staged"],
-        capture_output=True, text=True
+        ["git", "diff", "--staged", "--", ".", "':!.env*'"],
+        capture_output=True,
+        text=True,
     )
     return result.stdout
 
 
 @registry.register(
     name="get_git_status",
-    description="Get git status showing modified, staged, and untracked files."
+    description="Get git status showing modified, staged, and untracked files.",
 )
 def get_git_status() -> str:
     """Get git status."""
+    # Note: --short might still show .env if not ignored, but we filter or ignore it
     result = subprocess.run(
-        ["git", "status", "--short"],
-        capture_output=True, text=True
+        ["git", "status", "--short"], capture_output=True, text=True
     )
-    return result.stdout
+    # Filter out .env from output lines
+    lines = result.stdout.splitlines()
+    filtered_lines = [line for line in lines if ".env" not in line]
+    return "\n".join(filtered_lines)
 
 
 # --- Code Analysis Tools ---
 
+
 @registry.register(
     name="parse_python_ast",
-    description="Parse a Python file and return AST information including classes, functions, and their signatures."
+    description="Parse a Python file and return AST information including classes, functions, and their signatures.",
 )
 def parse_python_ast(filepath: str) -> str:
     """Parse Python file and extract structure."""
+    if not _is_safe_path(filepath):
+        return "Error: Access to .env files is strictly prohibited."
     try:
         with open(filepath, "r") as f:
             code = f.read()
-        
+
         tree = ast.parse(code)
-        structure = {
-            "classes": [],
-            "functions": [],
-            "imports": []
-        }
-        
+        structure = {"classes": [], "functions": [], "imports": []}
+
         for node in tree.body:
             if isinstance(node, ast.ClassDef):
                 methods = [m.name for m in node.body if isinstance(m, ast.FunctionDef)]
-                structure["classes"].append({
-                    "name": node.name,
-                    "methods": methods,
-                    "lineno": node.lineno
-                })
+                structure["classes"].append(
+                    {"name": node.name, "methods": methods, "lineno": node.lineno}
+                )
             elif isinstance(node, ast.FunctionDef):
                 args = [arg.arg for arg in node.args.args]
-                structure["functions"].append({
-                    "name": node.name,
-                    "args": args,
-                    "lineno": node.lineno
-                })
+                structure["functions"].append(
+                    {"name": node.name, "args": args, "lineno": node.lineno}
+                )
             elif isinstance(node, (ast.Import, ast.ImportFrom)):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
@@ -151,7 +191,7 @@ def parse_python_ast(filepath: str) -> str:
                     module = node.module or ""
                     for alias in node.names:
                         structure["imports"].append(f"{module}.{alias.name}")
-        
+
         return json.dumps(structure, indent=2)
     except Exception as e:
         return f"Error parsing AST: {str(e)}"
@@ -159,19 +199,21 @@ def parse_python_ast(filepath: str) -> str:
 
 @registry.register(
     name="get_function_code",
-    description="Extract the source code of a specific function from a Python file."
+    description="Extract the source code of a specific function from a Python file.",
 )
 def get_function_code(filepath: str, function_name: str) -> str:
     """Get source code of a specific function."""
+    if not _is_safe_path(filepath):
+        return "Error: Access to .env files is strictly prohibited."
     try:
         with open(filepath, "r") as f:
             code = f.read()
-        
+
         tree = ast.parse(code)
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == function_name:
                 return ast.unparse(node)
-        
+
         return f"Function '{function_name}' not found in {filepath}"
     except Exception as e:
         return f"Error extracting function: {str(e)}"
@@ -179,24 +221,23 @@ def get_function_code(filepath: str, function_name: str) -> str:
 
 # --- Command Execution Tools ---
 
+
 @registry.register(
     name="run_command",
-    description="Run a shell command and return stdout, stderr, and exit code. Use for running tests, linters, etc."
+    description="Run a shell command and return stdout, stderr, and exit code. Use for running tests, linters, etc.",
 )
 def run_command(command: str) -> str:
     """Run a shell command."""
+    if not _is_safe_command(command):
+        return "Error: Command rejected. Accessing environment variables or .env files is strictly prohibited."
     try:
         result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=30
+            command, shell=True, capture_output=True, text=True, timeout=30
         )
         response = {
             "stdout": result.stdout,
             "stderr": result.stderr,
-            "returncode": result.returncode
+            "returncode": result.returncode,
         }
         if result.returncode != 0:
             response["error"] = f"Command failed with exit code {result.returncode}"
@@ -209,23 +250,27 @@ def run_command(command: str) -> str:
 
 @registry.register(
     name="run_pytest",
-    description="Run pytest on a specific test file or directory. Returns test results."
+    description="Run pytest on a specific test file or directory. Returns test results.",
 )
 def run_pytest(path: str) -> str:
     """Run pytest on a file or directory."""
+    if not _is_safe_path(path):
+        return "Error: Cannot run tests on .env files."
     try:
         result = subprocess.run(
             ["pytest", path, "-v", "--tb=short"],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
         )
-        return json.dumps({
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode,
-            "passed": result.returncode == 0
-        })
+        return json.dumps(
+            {
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
+                "passed": result.returncode == 0,
+            }
+        )
     except subprocess.TimeoutExpired:
         return json.dumps({"error": "Tests timed out after 60 seconds"})
     except Exception as e:
@@ -234,9 +279,10 @@ def run_pytest(path: str) -> str:
 
 # --- Test Generation Helpers ---
 
+
 @registry.register(
     name="check_test_exists",
-    description="Check if a test file exists for a given source file. Returns the test file path if it exists."
+    description="Check if a test file exists for a given source file. Returns the test file path if it exists.",
 )
 def check_test_exists(source_file: str) -> str:
     """Check if test file exists for source file."""
@@ -249,50 +295,133 @@ def check_test_exists(source_file: str) -> str:
             Path("tests") / path.parent / f"test_{path.name}",
             Path("tests") / f"test_{path.name}",
         ]
-        
+
         for test_path in possible_test_paths:
             if test_path.exists():
-                return json.dumps({
-                    "exists": True,
-                    "path": str(test_path)
-                })
-        
-        return json.dumps({
-            "exists": False,
-            "suggested_path": str(Path("tests") / f"test_{path.name}")
-        })
+                return json.dumps({"exists": True, "path": str(test_path)})
+
+        return json.dumps(
+            {
+                "exists": False,
+                "suggested_path": str(Path("tests") / f"test_{path.name}"),
+            }
+        )
     except Exception as e:
         return f"Error checking test file: {str(e)}"
 
 
 @registry.register(
     name="get_project_structure",
-    description="Get an overview of the project structure including directories and Python files."
+    description="Get an overview of the project structure including directories and Python files.",
 )
 def get_project_structure(root_dir: str = ".") -> str:
     """Get project structure."""
     try:
         if not os.path.isdir(root_dir):
-            return f"Error getting project structure: Directory {root_dir} does not exist."
-        structure = {
-            "root": root_dir,
-            "directories": [],
-            "python_files": []
-        }
-        
+            return (
+                f"Error getting project structure: Directory {root_dir} does not exist."
+            )
+        structure = {"root": root_dir, "directories": [], "python_files": []}
+
         for root, dirs, files in os.walk(root_dir):
             # Skip common directories
-            dirs[:] = [d for d in dirs if d not in ['.git', '__pycache__', 'venv', '.venv', 'node_modules', '.pytest_cache']]
-            
+            dirs[:] = [
+                d
+                for d in dirs
+                if d
+                not in [
+                    ".git",
+                    "__pycache__",
+                    "venv",
+                    ".venv",
+                    "node_modules",
+                    ".pytest_cache",
+                ]
+            ]
+
             rel_root = os.path.relpath(root, root_dir)
             if rel_root != ".":
                 structure["directories"].append(rel_root)
-            
+
             for file in files:
-                if file.endswith('.py'):
+                if file.endswith(".py"):
                     rel_path = os.path.relpath(os.path.join(root, file), root_dir)
                     structure["python_files"].append(rel_path)
-        
+
         return json.dumps(structure, indent=2)
     except Exception as e:
         return f"Error getting project structure: {str(e)}"
+
+
+@registry.register(
+    name="get_project_sbom",
+    description="Get a Software Bill of Materials (SBOM) showing top-level dependencies, their versions, licenses, and which files import them.",
+)
+def get_project_sbom(directory: str = ".") -> str:
+    """Analyze project imports and versions."""
+    try:
+        from sarathi.cli.sbom_cli import get_sbom_imports
+
+        lib_to_files, package_info = get_sbom_imports(directory)
+        return json.dumps(
+            {"libraries": lib_to_files, "package_info": package_info}, indent=2
+        )
+    except Exception as e:
+        return f"Error getting SBOM: {str(e)}"
+
+
+@registry.register(
+    name="get_dependency_graph",
+    description="Get the full recursive dependency tree of installed packages starting from project roots or a specific package.",
+)
+def get_dependency_graph(
+    package_name: Optional[str] = None, directory: str = "."
+) -> str:
+    """Get recursive dependency tree."""
+    try:
+        from sarathi.cli.sbom_cli import get_dep_graph_data, get_sbom_imports
+
+        if package_name:
+            root_pkgs = [package_name]
+        else:
+            lib_to_files, _ = get_sbom_imports(directory)
+            root_pkgs = list(lib_to_files.keys())
+
+        graph, _ = get_dep_graph_data(root_pkgs)
+        return json.dumps(graph, indent=2)
+    except Exception as e:
+        return f"Error getting dependency graph: {str(e)}"
+
+
+@registry.register(
+    name="check_dependency_integrity",
+    description="Check for 'bloat' (declared but unused) or 'undeclared' (used but missing from pyproject.toml) dependencies.",
+)
+def check_dependency_integrity(directory: str = ".") -> str:
+    """Check for unused or undeclared dependencies."""
+    try:
+        from sarathi.cli.sbom_cli import get_integrity_report
+
+        results = get_integrity_report(directory)
+        if not results:
+            return (
+                "Could not generate integrity report (maybe pyproject.toml is missing)."
+            )
+        return json.dumps(results, indent=2)
+    except Exception as e:
+        return f"Error checking dependency integrity: {str(e)}"
+
+
+@registry.register(
+    name="get_package_dependents",
+    description="Find which other installed packages depend on a specific package (Reverse Dependency search). Useful for vulnerability impact analysis.",
+)
+def get_package_dependents(package_name: str) -> str:
+    """Find apps/libs requiring the given package."""
+    try:
+        from sarathi.cli.sbom_cli import get_reverse_deps
+
+        dependents = get_reverse_deps(package_name)
+        return json.dumps(dependents, indent=2)
+    except Exception as e:
+        return f"Error finding package dependents: {str(e)}"

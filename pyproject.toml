@@ -20,20 +20,27 @@ classifiers = [
 keywords = ["cli", "coding assistant"]
 requires-python = ">=3.9"
 dependencies = [
-    "requests",
+    "httpx",
     "astor",
     "black",
     "PyYAML",
-    "aiohttp",
+    "aiohttp>=3.10.11",
     "questionary",
+    "rich",
 ]
 
 [project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+]
 dev = [
+    "sarathi[test]",
     "twine>=4.0.2",
     "wheel",
-    "pytest",
-    "pytest-mock"
+    "black",
+    "isort",
 ]
 
 [project.urls]
