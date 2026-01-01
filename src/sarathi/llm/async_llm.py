@@ -114,7 +114,10 @@ class AsyncLLMClient:
 
             usage_tracker.record_call(end_time - start_time, usage)
 
-            return data["choices"][0]["message"]["content"]
+            choices = data.get("choices")
+            if not choices:
+                return "Error: No response options returned from LLM."
+            return choices[0]["message"]["content"]
 
     async def complete_batch(
         self,
