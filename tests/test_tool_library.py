@@ -1,22 +1,15 @@
-import pytest
-import os
 import json
-from unittest import mock
+import os
 from pathlib import Path
-from sarathi.llm.tool_library import (
-    read_file,
-    write_file,
-    list_files,
-    find_python_files,
-    get_git_diff,
-    get_git_status,
-    parse_python_ast,
-    get_function_code,
-    run_command,
-    run_pytest,
-    check_test_exists,
-    get_project_structure
-)
+from unittest import mock
+
+import pytest
+
+from sarathi.llm.tool_library import (check_test_exists, find_python_files,
+                                      get_function_code, get_git_diff,
+                                      get_git_status, get_project_structure,
+                                      list_files, parse_python_ast, read_file,
+                                      run_command, run_pytest, write_file)
 
 
 # --- Fixtures ---
@@ -31,6 +24,7 @@ def sample_directory(tmp_path):
 
 
 # --- Tests for File System Tools ---
+
 
 def test_read_file(tmp_path):
     """Test reading a file successfully."""
@@ -85,9 +79,12 @@ def test_find_python_files_error():
 
 # --- Tests for Git Tools ---
 
+
 def test_get_git_diff(mocker):
     """Test getting git diff for staged changes."""
-    mocker.patch("subprocess.run", return_value=mock.Mock(stdout="diff --git a/file b/file"))
+    mocker.patch(
+        "subprocess.run", return_value=mock.Mock(stdout="diff --git a/file b/file")
+    )
     assert "diff --git a/file b/file" in get_git_diff()
 
 
@@ -99,22 +96,25 @@ def test_get_git_status(mocker):
 
 # --- Tests for Code Analysis Tools ---
 
+
 def test_parse_python_ast(tmp_path):
     """Test parsing a Python file to extract AST structure."""
     file_path = tmp_path / "test.py"
-    file_path.write_text("""
+    file_path.write_text(
+        """
 class TestClass:
     def method(self):
         pass
 
 def function():
     pass
-""")
+"""
+    )
     structure = json.loads(parse_python_ast(str(file_path)))
     assert structure == {
         "classes": [{"name": "TestClass", "methods": ["method"], "lineno": 2}],
         "functions": [{"name": "function", "args": [], "lineno": 6}],
-        "imports": []
+        "imports": [],
     }
 
 
@@ -126,10 +126,12 @@ def test_parse_python_ast_error():
 def test_get_function_code(tmp_path):
     """Test extracting source code of a specific function."""
     file_path = tmp_path / "test.py"
-    file_path.write_text("""
+    file_path.write_text(
+        """
 def function():
     return True
-""")
+"""
+    )
     function_code = get_function_code(str(file_path), "function")
     assert "def function():\n    return True" in function_code
 
@@ -138,14 +140,20 @@ def test_get_function_code_not_found(tmp_path):
     """Test extracting source code of a non-existent function."""
     file_path = tmp_path / "test.py"
     file_path.write_text("")
-    assert "Function 'non_existent' not found" in get_function_code(str(file_path), "non_existent")
+    assert "Function 'non_existent' not found" in get_function_code(
+        str(file_path), "non_existent"
+    )
 
 
 # --- Tests for Command Execution Tools ---
 
+
 def test_run_command(mocker):
     """Test running a shell command."""
-    mocker.patch("subprocess.run", return_value=mock.Mock(stdout="output", stderr="", returncode=0))
+    mocker.patch(
+        "subprocess.run",
+        return_value=mock.Mock(stdout="output", stderr="", returncode=0),
+    )
     result = json.loads(run_command("echo 'hello'"))
     assert result == {"stdout": "output", "stderr": "", "returncode": 0}
 
@@ -157,6 +165,7 @@ def test_run_command_error():
 
 
 # --- Tests for Test Generation Helpers ---
+
 
 def test_check_test_exists(mocker):
     """Test checking if a test file exists."""
@@ -187,4 +196,6 @@ def test_get_project_structure(tmp_path):
 
 def test_get_project_structure_error():
     """Test getting project structure for a non-existent directory."""
-    assert "Error getting project structure" in get_project_structure("/non_existent_directory")
+    assert "Error getting project structure" in get_project_structure(
+        "/non_existent_directory"
+    )

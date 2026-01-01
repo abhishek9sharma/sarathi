@@ -21,13 +21,19 @@ def setup_args(subparsers, opname="config"):
     )
 
     show_parser = sub.add_parser("show", help="Show the current active configuration")
-    
-    info_parser = sub.add_parser("info", help="Show information about loaded configuration files")
+
+    info_parser = sub.add_parser(
+        "info", help="Show information about loaded configuration files"
+    )
 
     set_parser = sub.add_parser("set", help="Set a configuration value")
-    set_parser.add_argument("key", help="Configuration key (dot notation, e.g., core.timeout)")
+    set_parser.add_argument(
+        "key", help="Configuration key (dot notation, e.g., core.timeout)"
+    )
     set_parser.add_argument("value", help="Value to set")
-    set_parser.add_argument("--no-save", action="store_true", help="Do not save to file")
+    set_parser.add_argument(
+        "--no-save", action="store_true", help="Do not save to file"
+    )
 
 
 def execute_cmd(args):
@@ -57,11 +63,13 @@ def execute_cmd(args):
                     val = int(val)
             except ValueError:
                 pass
-        
+
         config.set(args.key, val, save=not args.no_save)
         print(f"Set {args.key} = {val}")
     else:
-        print("Use 'sarathi config init', 'sarathi config show', 'sarathi config info', or 'sarathi config set'")
+        print(
+            "Use 'sarathi config init', 'sarathi config show', 'sarathi config info', or 'sarathi config set'"
+        )
 
 
 def create_config(custom_path=None):
@@ -89,14 +97,20 @@ def create_config(custom_path=None):
     # Configure YAML to use block style for multiline strings
     def str_presenter(dumper, data):
         if len(data.splitlines()) > 1:  # check for multiline string
-            return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-        return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
     # Use a custom Dumper to ensure we don't affect global state if imported elsewhere
     yaml.add_representer(str, str_presenter)
 
     with open(path, "w") as f:
         # We must use Dumper=yaml.Dumper to ensure the python-based add_representer works
-        yaml.dump(full_config, f, default_flow_style=False, sort_keys=False, Dumper=yaml.Dumper)
+        yaml.dump(
+            full_config,
+            f,
+            default_flow_style=False,
+            sort_keys=False,
+            Dumper=yaml.Dumper,
+        )
 
     print(f"Configuration file created at {path}")

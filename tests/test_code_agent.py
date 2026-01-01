@@ -1,5 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from sarathi.code.code_agent import CodeEditAgent
 
 
@@ -15,9 +17,13 @@ def test_generate_tests_success():
     source_file = "dummy_path.py"
     expected_result = "tests/test_dummy_path.py"
 
-    with patch('sarathi.llm.agent_engine.AgentEngine.run', return_value=expected_result) as mock_run:
+    with patch(
+        "sarathi.llm.agent_engine.AgentEngine.run", return_value=expected_result
+    ) as mock_run:
         result = agent.generate_tests(source_file)
-        mock_run.assert_called_once_with(f"Generate comprehensive unit tests for the file: {source_file}")
+        mock_run.assert_called_once_with(
+            f"Generate comprehensive unit tests for the file: {source_file}"
+        )
         assert result == expected_result
 
 
@@ -27,9 +33,13 @@ def test_generate_tests_with_error():
     source_file = "non_existent_path.py"
     expected_error = "Error: File not found"
 
-    with patch('sarathi.llm.agent_engine.AgentEngine.run', return_value=expected_error) as mock_run:
+    with patch(
+        "sarathi.llm.agent_engine.AgentEngine.run", return_value=expected_error
+    ) as mock_run:
         result = agent.generate_tests(source_file)
-        mock_run.assert_called_once_with(f"Generate comprehensive unit tests for the file: {source_file}")
+        mock_run.assert_called_once_with(
+            f"Generate comprehensive unit tests for the file: {source_file}"
+        )
         assert result == expected_error
 
 
@@ -40,7 +50,9 @@ def test_edit_code_with_context():
     context_files = ["file1.py", "file2.py"]
     expected_result = "Refactoring complete"
 
-    with patch('sarathi.llm.agent_engine.AgentEngine.run', return_value=expected_result) as mock_run:
+    with patch(
+        "sarathi.llm.agent_engine.AgentEngine.run", return_value=expected_result
+    ) as mock_run:
         result = agent.edit_code(user_request, context_files)
         assert "Context files:" in mock_run.call_args[0][0]
         assert result == expected_result
@@ -52,7 +64,9 @@ def test_edit_code_without_context():
     user_request = "Add a new feature"
     expected_result = "Feature added successfully"
 
-    with patch('sarathi.llm.agent_engine.AgentEngine.run', return_value=expected_result) as mock_run:
+    with patch(
+        "sarathi.llm.agent_engine.AgentEngine.run", return_value=expected_result
+    ) as mock_run:
         result = agent.edit_code(user_request)
         mock_run.assert_called_once_with(user_request)
         assert result == expected_result
