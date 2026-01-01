@@ -19,20 +19,20 @@ def test_get_imports(tmp_path):
     d.mkdir()
     p = d / "test_file.py"
     p.write_text(
-        "import os\nimport requests\nfrom yaml import load\nimport sarathi.cli"
+        "import os\nimport httpx\nfrom yaml import load\nimport sarathi.cli"
     )
 
     imports = get_imports(str(p))
     # Should get top level names
     assert "os" in imports
-    assert "requests" in imports
+    assert "httpx" in imports
     assert "yaml" in imports
     assert "sarathi" in imports
 
 
 def test_resolve_package_info():
-    # Test a known package (requests is a dependency of sarathi)
-    info = resolve_package_info("requests")
+    # Test a known package (httpx is a dependency of sarathi)
+    info = resolve_package_info("httpx")
     assert info is not None
     assert "version" in info
     assert "license" in info
@@ -57,17 +57,17 @@ def test_get_integrity_report(tmp_path):
         """
 [project]
 dependencies = [
-    "requests",
+    "httpx",
     "unused-lib"
 ]
 """
     )
 
-    # Code using requests but not unused-lib, and also using an undeclared lib
+    # Code using httpx but not unused-lib, and also using an undeclared lib
     src = root / "src"
     src.mkdir()
     code = src / "main.py"
-    code.write_text("import requests\nimport undeclared_lib")
+    code.write_text("import httpx\nimport undeclared_lib")
 
     report = get_integrity_report(str(root))
 
@@ -79,20 +79,19 @@ dependencies = [
 
 def test_get_reverse_deps():
     # Search for something we know is used
-    # In this environment, requests usually has some dependents or we can search for a common one
-    # Let's try to find if any package depends on 'urllib3' (very common)
-    deps = get_reverse_deps("urllib3")
+    # Let's try to find if any package depends on 'idna' (common dep of httpx)
+    deps = get_reverse_deps("idna")
     assert isinstance(deps, list)
-    # Most likely 'requests' is in there
+    # Most likely 'httpx' is in there
     pkg_names = [d["package"].lower() for d in deps]
-    if "requests" in pkg_names:
+    if "httpx" in pkg_names:
         assert True
 
 
 def test_get_dep_graph_data():
-    # Only test if it returns a structure for requests
-    graph, seen = get_dep_graph_data(["requests"])
-    assert "requests" in graph
-    assert "version" in graph["requests"]
-    assert "dependencies" in graph["requests"]
-    assert "requests" in seen
+    # Only test if it returns a structure for httpx
+    graph, seen = get_dep_graph_data(["httpx"])
+    assert "httpx" in graph
+    assert "version" in graph["httpx"]
+    assert "dependencies" in graph["httpx"]
+    assert "httpx" in seen
