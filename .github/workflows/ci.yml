@@ -25,6 +25,7 @@ jobs:
 
     - name: Test with pytest
       run: |
+        uv pip install --system pytest
         pytest
 
     - name: SBOM Integrity Check
