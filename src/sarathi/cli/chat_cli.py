@@ -150,7 +150,7 @@ class ChatSession:
         if text is None:
             return None
 
-        cmds = ["/exit", "/quit", "/clear", "/history", "/reindex", "/model"]
+        cmds = ["/exit", "/quit", "/clear", "/history", "/reindex", "/model", "/usage"]
 
         # Get the full buffer to understand context
         buffer = readline.get_line_buffer()
@@ -335,6 +335,10 @@ class ChatSession:
                 current_model = config.get("agents.chat.model")
                 print(f"Current model: {current_model}")
                 print("Usage: /model <model_name>")
+        elif cmd == "/usage":
+            from sarathi.utils.usage import usage_tracker
+
+            print(usage_tracker.get_summary())
         else:
             print(f"Unknown command: {cmd}")
 

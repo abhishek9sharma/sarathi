@@ -51,7 +51,11 @@ class AgentEngine:
             tool_calls_chunks = {}  # index -> tool_call object
 
             for chunk in self._call_llm_stream():
-                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                choices = chunk.get("choices")
+                if not choices:
+                    continue
+                
+                delta = choices[0].get("delta", {})
 
                 # Handle content
                 content = delta.get("content")
@@ -153,6 +157,7 @@ class AgentEngine:
             "tools": registry.get_tool_definitions() if self.tools else None,
             "temperature": agent_conf.get("temperature", 0.7),
             "stream": True,  # Enable streaming
+            "stream_options": {"include_usage": True},
         }
 
         if not body["tools"]:
@@ -203,13 +208,18 @@ class AgentEngine:
                             try:
                                 chunk = json.loads(json_data)
 
-                                # Accumulate usage from each chunk if available (some providers send it at the end)
+                                # Accumulate usage from each chunk if available
                                 usage = chunk.get("usage")
                                 if usage:
-                                    total_prompt_tokens = usage.get("prompt_tokens", 0)
-                                    total_completion_tokens = usage.get(
-                                        "completion_tokens", 0
-                                    )
+                                    # Some providers send partials, some only send final
+                                    # We take the max or the last non-zero for prompt/completion
+                                    pt = usage.get("prompt_tokens") or usage.get("input_tokens") or 0
+                                    ct = usage.get("completion_tokens") or usage.get("output_tokens") or 0
+                                    
+                                    if pt > 0:
+                                        total_prompt_tokens = pt
+                                    if ct > 0:
+                                        total_completion_tokens = ct
 
                                 yield chunk
                             except json.JSONDecodeError:

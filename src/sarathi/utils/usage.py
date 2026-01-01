@@ -13,6 +13,13 @@ class UsageTracker:
         self.total_calls = 0
         self.total_time_seconds = 0.0
 
+    def reset(self):
+        """Resets all tracking statistics."""
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.total_calls = 0
+        self.total_time_seconds = 0.0
+
     def record_call(self, time_seconds: float, usage: Optional[Dict[str, int]] = None):
         """
         Records statistics from a single LLM call.
@@ -21,8 +28,18 @@ class UsageTracker:
         self.total_time_seconds += time_seconds
 
         if usage:
-            self.total_input_tokens += usage.get("prompt_tokens", 0)
-            self.total_output_tokens += usage.get("completion_tokens", 0)
+            # Support multiple possible key names for tokens
+            self.total_input_tokens += (
+                usage.get("prompt_tokens")
+                or usage.get("input_tokens")
+                or usage.get("total_tokens", 0) - usage.get("completion_tokens", 0)
+                if "prompt_tokens" not in usage and "input_tokens" not in usage
+                else usage.get("prompt_tokens") or usage.get("input_tokens") or 0
+            )
+
+            self.total_output_tokens += (
+                usage.get("completion_tokens") or usage.get("output_tokens") or 0
+            )
 
     def get_summary(self) -> str:
         """
