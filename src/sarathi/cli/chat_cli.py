@@ -15,8 +15,13 @@ from rich.markdown import Markdown
 from sarathi.cli.banner import print_banner
 from sarathi.llm.agent_engine import AgentEngine
 from sarathi.llm.tool_library import registry
-from sarathi.utils.formatters import (format_bold, format_code, format_cyan,
-                                      format_green, format_yellow)
+from sarathi.utils.formatters import (
+    format_bold,
+    format_code,
+    format_cyan,
+    format_green,
+    format_yellow,
+)
 
 console = Console()
 

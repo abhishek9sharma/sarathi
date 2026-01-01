@@ -3,9 +3,14 @@ import os
 
 import pytest
 
-from sarathi.cli.sbom_cli import (get_dep_graph_data, get_imports,
-                                  get_integrity_report, get_reverse_deps,
-                                  get_sbom_imports, resolve_package_info)
+from sarathi.cli.sbom_cli import (
+    get_dep_graph_data,
+    get_imports,
+    get_integrity_report,
+    get_reverse_deps,
+    get_sbom_imports,
+    resolve_package_info,
+)
 
 
 def test_get_imports(tmp_path):

@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+
 def _process_at_mentions(user_input):
     def replace_match(match):
         filepath = match.group(1)
@@ -15,7 +16,8 @@ def _process_at_mentions(user_input):
             print(f"Warning: File not found: {filepath}")
             return match.group(0)
 
-    return re.sub(r'@([\w./-]+)', replace_match, user_input)
+    return re.sub(r"@([\w./-]+)", replace_match, user_input)
+
 
 # Test cases
 print(f"Test 1: {_process_at_mentions('Check @README.md please')}")

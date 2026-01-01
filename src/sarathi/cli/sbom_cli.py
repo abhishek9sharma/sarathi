@@ -9,8 +9,12 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.tree import Tree as RichTree
 
-from sarathi.utils.formatters import (format_bold, format_cyan, format_green,
-                                      format_yellow)
+from sarathi.utils.formatters import (
+    format_bold,
+    format_cyan,
+    format_green,
+    format_yellow,
+)
 from sarathi.utils.io import get_filepaths
 
 console = Console()

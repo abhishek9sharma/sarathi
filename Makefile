@@ -25,6 +25,7 @@ help:
 	@echo "make venv      - Create a virtual environment"
 	@echo "make install   - Install dependencies (uses uv if available)"
 	@echo "make test      - Run tests"
+	@echo "make coverage  - Run tests and generate coverage report"
 	@echo "make format    - Format code"
 	@echo "make clean     - Remove artifacts"
 	@echo "make build     - Full clean, install, and test cycle"
@@ -47,6 +48,10 @@ endif
 test:
 	@echo "Running tests..."
 	$(PYTHON_CMD) -m pytest tests/ -v
+
+coverage:
+	@echo "Running tests with coverage..."
+	$(PYTHON_CMD) -m pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=50 tests/
 
 format:
 	@echo "Formatting code..."

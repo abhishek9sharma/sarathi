@@ -30,11 +30,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "twine>=4.0.2",
-    "wheel",
+test = [
     "pytest",
     "pytest-mock",
+    "pytest-cov",
+]
+dev = [
+    "sarathi[test]",
+    "twine>=4.0.2",
+    "wheel",
     "black",
     "isort",
 ]

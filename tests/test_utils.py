@@ -4,8 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from sarathi.utils.io import (get_filepaths, is_valid_directory, is_valid_file,
-                              read_file)
+from sarathi.utils.io import get_filepaths, is_valid_directory, is_valid_file, read_file
 
 
 @pytest.fixture
