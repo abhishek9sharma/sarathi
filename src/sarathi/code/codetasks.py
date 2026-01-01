@@ -4,7 +4,6 @@ import subprocess
 import astor
 
 from sarathi.llm.call_llm import call_llm_model
-from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.formatters import format_code
 
 
@@ -43,7 +42,7 @@ class CodeTransformer:
         """
         methods = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 methods.append(node)
         return methods
 
@@ -62,7 +61,9 @@ class CodeTransformer:
         new_docstring = new_docstring.replace('"""', "")
         new_docstring = new_docstring.replace("'", "")
         new_docstring_node = ast.Expr(
-            value=ast.Str(new_docstring), lineno=method.lineno, col_offset=indentation
+            value=ast.Constant(value=new_docstring),
+            lineno=method.lineno,
+            col_offset=indentation,
         )
         return new_docstring_node
 
@@ -83,9 +84,10 @@ class CodeTransformer:
                 if existing_docstring:
                     if overwrite_existing:
                         new_docstring = call_llm_model(
-                            prompt_info=prompt_dict[self.dosctring_prompt],
+                            prompt_info={},
                             user_msg=existing_method_code,
                             resp_type="text",
+                            agent_name=self.dosctring_prompt,
                         )
                         new_docstring_node = self.format_node_with_new_docstring(
                             new_docstring, method
@@ -95,9 +97,10 @@ class CodeTransformer:
                         pass
                 else:
                     new_docstring = call_llm_model(
-                        prompt_info=prompt_dict[self.dosctring_prompt],
+                        prompt_info={},
                         user_msg=existing_method_code,
                         resp_type="text",
+                        agent_name=self.dosctring_prompt,
                     )
                     if new_docstring is not None:
                         new_docstring_node = self.format_node_with_new_docstring(

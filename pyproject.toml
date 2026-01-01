@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sarathi"
+version = "0.0.5"
+description = "A CLI coding assistant"
+readme = "README.md"
+authors = [
+  { name = "Abhishek Sharma" },
+]
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+]
+keywords = ["cli", "coding assistant"]
+requires-python = ">=3.9"
+dependencies = [
+    "httpx",
+    "astor",
+    "black",
+    "PyYAML",
+    "aiohttp>=3.10.11",
+    "questionary",
+    "rich",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+]
+dev = [
+    "sarathi[test]",
+    "twine>=4.0.2",
+    "wheel",
+    "black",
+    "isort",
+]
+
+[project.urls]
+"Bug Reports" = "https://github.com/abhishek9sharma/sarathi/issues"
+"Source" = "https://github.com/abhishek9sharma/sarathi"
+
+[project.scripts]
+sarathi = "sarathi.cli.cli_handler:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

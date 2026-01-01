@@ -1,101 +1,126 @@
-import os
+import json
+import time
 
-import requests
+import httpx
 
-
-def get_env_var(var_names, default=None, error_msg=None):
-    """Generic function to retrieve environment variables."""
-
-    for name in var_names:
-        if name in os.environ:
-            return os.environ[name]
-    if default is not None:
-        return default
-    raise ValueError(error_msg or f"Environment variable(s) not found: {var_names}")
+from sarathi.config.config_manager import config
+from sarathi.utils.formatters import clean_llm_response
+from sarathi.utils.usage import usage_tracker
 
 
-def retrieve_api_key():
+def get_agent_config(agent_name):
+    """Retrieves the configuration for a specific agent."""
+    if not agent_name:
+        return {}
+
+    # Map legacy prompt keys to new agent names if needed
+    if agent_name == "autocommit":
+        agent_name = "commit_generator"
+
+    return config.get_agent_config(agent_name)
+
+
+def parse_stream(response_iter):
+    """Helper to parse OpenAI-style SSE stream chunks."""
+    for line in response_iter:
+        if not line or not line.startswith("data: "):
+            continue
+        if line == "data: [DONE]":
+            break
+        try:
+            chunk = json.loads(line[6:])
+            yield chunk
+        except:
+            continue
+
+
+def call_llm_model(prompt_info, user_msg, resp_type=None, agent_name=None):
     """
-    Retrieve the OpenAI API key from environment variables.
-
-    Returns:
-        str: The OpenAI API key.
-
-    Raises:
-        ValueError: If neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found.
+    Generate a response from the configured LLM using httpx.
     """
+    agent_conf = get_agent_config(agent_name)
+    model_name = agent_conf.get("model") or prompt_info.get("model") or "gpt-4o-mini"
+    provider_name = agent_conf.get("provider", "openai")
+    provider_conf = config.get_provider_config(provider_name)
 
-    return get_env_var(
-        ["SARATHI_OPENAI_API_KEY", "OPENAI_API_KEY"],
-        error_msg="Neither SARATHI_OPENAI_API_KEY nor OPENAI_API_KEY is found",
-    )
+    system_msg = agent_conf.get("system_prompt")
+    if not system_msg:
+        system_msg = config.get(f"prompts.{agent_name}")
+    if not system_msg:
+        system_msg = prompt_info.get("system_msg", "")
 
+    base_url = provider_conf.get("base_url")
+    if not base_url:
+        raise ValueError(f"base_url not found in config for provider '{provider_name}'")
 
-def retrieve_llm_url():
-    """
-    Retrieve the OpenAI API endpoint URL from environment variables.
+    url = f"{base_url.rstrip('/')}/chat/completions"
+    api_key = provider_conf.get("api_key")
 
-    Returns:
-        str: The OpenAI API endpoint URL. Defaults to 'https://api.openai.com/v1/chat/completions'
-             if OPENAI_ENDPOINT_URL is not set.
-    """
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
-    return get_env_var(
-        ["OPENAI_ENDPOINT_URL"], default="https://api.openai.com/v1/chat/completions"
-    )
-
-
-def retrieve_model_name(prompt_info):
-    """
-    Retrieve the OpenAI model name from environment variables.
-        prompt_info (dict): A dictionary containing information about the prompt, including the model and system message.
-
-    Returns:
-        str: The OpenAI model name. Defaults to 'gpt-4o-mini' if OPENAI_MODEL_NAME is not set.
-        dict: updated prompt_info
-    """
-    model_name = get_env_var(
-        ["OPENAI_MODEL_NAME"],
-        default=(prompt_info["model"] if prompt_info["model"] else "gpt-4o-mini"),
-    )
-    if prompt_info["model"] != model_name:
-        prompt_info["model"] = model_name
-    return model_name
-
-
-def call_llm_model(prompt_info, user_msg, resp_type=None):
-    """
-    Generate a response from the OpenAI language model based on the given prompt and user message.
-
-    Args:
-        prompt_info (dict): A dictionary containing information about the prompt, including the model and system message.
-        user_msg (str): The user message to be used as input for the language model.
-        resp_type (str, optional): The type of response expected. Defaults to None.
-
-    Returns:
-    """
-
-    url = retrieve_llm_url()
-    model_name = retrieve_model_name(prompt_info)
-    print(f"USING LLM : {url} and model :{model_name}")
-    system_msg = prompt_info["system_msg"]
-    headers = {
-        "Authorization": "Bearer " + retrieve_api_key(),
-        "Content-Type": "application/json",
-    }
     body = {
         "model": model_name,
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
         ],
-        "max_tokens": 100,
+        "max_tokens": 500,
         "n": 1,
-        "stop": None,
-        "temperature": 0.7,
+        "temperature": agent_conf.get("temperature", 0.7),
     }
-    response = requests.post(url, headers=headers, json=body)
-    if resp_type == "text":
-        text_resp = response.json()["choices"][0]["message"]["content"]
-        return text_resp
-    return response.json()
+
+    max_retries = config.get("core.llm_retries", 3)
+    retry_delay = 2
+
+    for attempt in range(max_retries + 1):
+        try:
+            with httpx.Client(
+                timeout=config.get("core.timeout", 30),
+                verify=config.get("core.verify_ssl", True),
+            ) as client:
+                start_time = time.time()
+                response = client.post(url, headers=headers, json=body)
+
+                if response.status_code == 429:
+                    if attempt < max_retries:
+                        print(
+                            f"⚠️  Rate limited (429). Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
+                        )
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                        continue
+
+                response.raise_for_status()
+                end_time = time.time()
+
+                data = response.json()
+
+                # Record usage
+                usage = data.get("usage")
+                usage_tracker.record_call(end_time - start_time, usage)
+
+                if resp_type == "text":
+                    choices = data.get("choices", [])
+                    if not choices:
+                        return "Error: No response from LLM provider."
+                    content = (
+                        choices[0]
+                        .get("message", {})
+                        .get("content", "Error: No content in LLM response.")
+                    )
+                    return clean_llm_response(content)
+                return data
+
+        except httpx.HTTPError as e:
+            if attempt < max_retries:
+                print(
+                    f"⚠️  LLM call failed: {e}. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(retry_delay)
+                retry_delay *= 2
+                continue
+
+            print(f"❌ Error calling LLM after {max_retries} retries: {e}")
+            return {"Error": f"LLM Call Failed after retries: {e}"}

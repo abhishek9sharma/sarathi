@@ -2,35 +2,7 @@ import argparse
 import os
 
 from sarathi.code.codetasks import CodeTransformer
-from sarathi.llm.call_llm import call_llm_model
-from sarathi.llm.prompts import prompt_dict
 from sarathi.utils.io import get_filepaths, is_valid_directory, is_valid_file
-
-
-def setup_args(subparsers, opname):
-    """
-    Adds arguments for setting up a command line parser.
-
-    Args:
-        subparsers: The subparsers object to add the arguments to.
-        opname: The name of the operation.
-
-    Returns:
-        None
-    """
-    gendocstr_parser = subparsers.add_parser(opname)
-    gendocstr_parser.add_argument(
-        "-f",
-        "--filepath",
-        required=False,
-        type=lambda x: is_valid_file(gendocstr_parser, x),
-    )
-    gendocstr_parser.add_argument(
-        "-d",
-        "--dirpath",
-        required=False,
-        type=lambda x: is_valid_directory(gendocstr_parser, x),
-    )
 
 
 def execute_cmd(args):
