@@ -27,6 +27,7 @@ dependencies = [
     "aiohttp>=3.10.11",
     "questionary",
     "rich",
+    "dataclasses"
 ]
 
 [project.optional-dependencies]

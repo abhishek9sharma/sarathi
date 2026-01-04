@@ -45,7 +45,7 @@ else
 	$(VENV_DIR)/bin/uv pip install -e .[dev]
 endif
 
-test: install
+test:
 	@echo "Running tests..."
 	$(PYTHON_CMD) -m pytest tests/ -v
 

@@ -660,6 +660,9 @@ def setup_args(subparsers, opname="sbom"):
         "path", nargs="?", help="Path to scan (default: current directory)"
     )
     imp_parser.add_argument("--json", action="store_true", help="Output in JSON format")
+    imp_parser.add_argument(
+        "--lib", help="Filter for a specific library/package name"
+    )
 
     # Subcommand: depgraph
     dep_parser = sbom_subparsers.add_parser(
