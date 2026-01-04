@@ -1,7 +1,7 @@
 core:
   provider: openai
   timeout: 30
-  simple_mode: false # Set to true for simple text-based permission prompts
+  simple_mode: true # Set to true for simple text-based permission prompts
   batching:
     small_file_threshold: 500
     max_batch_size: 3
@@ -166,7 +166,7 @@ agents:
     stream: true
   chat:
     provider: openai
-    model: gpt-5
+    model: gpt-4o
     temperature: 0.5
     stream: true
     # reasoning_model: false # Set to true for reasoning models like o1 or deepseek-r1

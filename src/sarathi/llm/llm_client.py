@@ -105,7 +105,9 @@ class LLMClient:
             "stream": stream,
         }
 
-        if stream:
+        # Only include stream_options for models that support it
+        # (OpenAI gpt-4o and later, not all providers/models support this)
+        if stream and self._supports_stream_options():
             body["stream_options"] = {"include_usage": True}
 
         if tools:
@@ -120,6 +122,13 @@ class LLMClient:
             pass  # Override specific params if needed
 
         return body
+
+    def _supports_stream_options(self) -> bool:
+        """Check if the current model supports stream_options parameter."""
+        model = self.model_name.lower()
+        # Only gpt-4o and newer OpenAI models support stream_options
+        supported_models = ["gpt-4o", "gpt-4-turbo", "o1", "o3"]
+        return any(supported in model for supported in supported_models)
 
     def call_streaming(
         self,
