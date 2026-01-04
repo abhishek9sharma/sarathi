@@ -549,6 +549,18 @@ def execute_imports(args):
 
     lib_to_files, package_info = get_sbom_imports(directory)
 
+    # Filter by specific library if requested
+    if args.lib:
+        target_lib = args.lib.lower()
+        # Filter lib_to_files (filtering keys)
+        lib_to_files = {
+            k: v for k, v in lib_to_files.items() if k.lower() == target_lib
+        }
+        # Filter package_info (optional, strictly speaking only used if lib_to_files has the key)
+        package_info = {
+            k: v for k, v in package_info.items() if k.lower() == target_lib
+        }
+
     if args.json:
         console.print(
             json_lib.dumps(
