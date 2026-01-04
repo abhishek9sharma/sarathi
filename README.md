@@ -126,7 +126,7 @@ Quickly change or view the LLM model used by Sarathi:
 - Change for a specific agent: `sarathi model claude-3-5-sonnet --agent code_editor`
 - Temporary change (no save): `sarathi model llama3 --no-save`
 
-#### SBOM (Software Bill of Materials) Tools
+#### SBOM (Software Bill of Materials) Tools (Python Only)
 Audit your project's dependencies, licenses, and full dependency trees with a **beautiful Rich terminal UI**:
 
 - **Library Mapping**: `sarathi sbom imports` (See which file imports which external library)
