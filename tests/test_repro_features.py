@@ -15,9 +15,10 @@ class TestFeatures(unittest.TestCase):
 
     def test_config_defaults(self):
         """Test that new config defaults are loaded."""
-        # Check core.simple_mode exists in config (may be False by default)
+        # Check core.simple_mode exists in config and is a boolean
         simple_mode = config.get("core.simple_mode")
-        self.assertIsNotNone(simple_mode) or self.assertFalse(simple_mode)
+        self.assertIsNotNone(simple_mode)
+        self.assertIsInstance(simple_mode, bool)
 
     def test_response_parser_reasoning_content_cleaning(self):
         """Test that ResponseParser cleans system prompt artifacts from reasoning content."""
