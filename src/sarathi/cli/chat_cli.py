@@ -218,6 +218,26 @@ class ChatSession:
         if permission == "always":
             return True
 
+        from sarathi.config.config_manager import config
+        simple_mode = config.get("core.simple_mode", False)
+
+        if simple_mode:
+            print(f"\n{format_green('Permission Request')}")
+            print(f"Agent wants to execute: {tool_name}")
+            print(f"Arguments: {tool_args}")
+            
+            while True:
+                response = input("Allow? [y/n/a(lways)/s(ession)]: ").strip().lower()
+                if response in ["y", "yes"]:
+                    return True
+                elif response in ["n", "no"]:
+                    return False
+                elif response in ["a", "always", "s", "session"]:
+                    self.permissions[tool_name] = "always"
+                    return True
+                print("Invalid input. Please enter y, n, a, or s.")
+        
+        # Default interactive mode
         print(f"\n{format_green('Permission Request')}")
         print(f"Agent wants to execute: {tool_name}")
         print(f"Arguments: {tool_args}")
@@ -288,10 +308,27 @@ class ChatSession:
                 full_response = ""
                 with Live(console=console, vertical_overflow="visible") as live:
                     for token in self.process_input_stream(user_input):
-                        full_response += token
-                        # Only render markdown if it looks like enough to be markdown
-                        # to avoid jitter on single characters
-                        live.update(Markdown(full_response))
+                        if isinstance(token, dict) and token.get("type") == "tool_call":
+                            # Stop live update temporarily to print outside the live block 
+                            # or just print inside if Live supports it, but standard print might break Live layout.
+                            # Safe bet: update the markdown with the tool call usage for history 
+                            # OR just print separate message.
+                            
+                            # Using console.print here might interfere with Live if we are not careful.
+                            # But Live usually handles stdout capture.
+                            pass # We handle printing below by updating live or effectively ignoring in markdown
+                            
+                        elif isinstance(token, str):
+                            full_response += token
+                            # Only render markdown if it looks like enough to be markdown
+                            # to avoid jitter on single characters
+                            live.update(Markdown(full_response))
+                        
+                        # Handle specific events if needed, for now we just filter out dicts from string concat
+                        if isinstance(token, dict) and token.get("type") == "tool_call":
+                             fname = token.get('name')
+                             live.console.print(f"[dim]Calling tool: {fname}...[/dim]")
+
                 print()
 
             except KeyboardInterrupt:
@@ -304,6 +341,8 @@ class ChatSession:
 
     def handle_slash_command(self, command):
         cmd = command.split()[0].lower()
+        parts = command.split()
+        
         if cmd in ["/exit", "/quit"]:
             self.running = False
             print("Goodbye!")
@@ -322,12 +361,13 @@ class ChatSession:
                     content_preview = f"<{len(msg['tool_calls'])} tool calls>"
                 print(f"[{role}]: {content_preview}")
         elif cmd == "/model":
-            parts = command.split()
             if len(parts) > 1:
                 new_model = parts[1]
                 from sarathi.config.config_manager import config
 
                 config.update_agent_model("chat", new_model, save=False)
+                # Reload client config
+                self.agent.client._agent_conf = None
                 print(f"Model for this chat session switched to: {new_model}")
             else:
                 from sarathi.config.config_manager import config
@@ -335,12 +375,63 @@ class ChatSession:
                 current_model = config.get("agents.chat.model")
                 print(f"Current model: {current_model}")
                 print("Usage: /model <model_name>")
+        elif cmd == "/stream":
+            from sarathi.config.config_manager import config
+            
+            if len(parts) > 1:
+                value = parts[1].lower() in ["true", "on", "1", "yes"]
+                config.set("agents.chat.stream", value, save=False)
+                # Reload client config
+                self.agent.client._agent_conf = None
+                print(f"Streaming {'enabled' if value else 'disabled'} for this session.")
+            else:
+                current = config.get("agents.chat.stream", True)
+                print(f"Streaming: {'enabled' if current else 'disabled'}")
+                print("Usage: /stream <on|off>")
+        elif cmd == "/reasoning":
+            from sarathi.config.config_manager import config
+            
+            if len(parts) > 1:
+                value = parts[1].lower() in ["true", "on", "1", "yes"]
+                config.set("agents.chat.reasoning_model", value, save=False)
+                # Reload client and parser config
+                self.agent.client._agent_conf = None
+                self.agent.parser.is_reasoning_model = value
+                print(f"Reasoning model mode {'enabled' if value else 'disabled'} for this session.")
+            else:
+                current = config.get("agents.chat.reasoning_model", False)
+                print(f"Reasoning model: {'enabled' if current else 'disabled'}")
+                print("Usage: /reasoning <on|off>")
+        elif cmd == "/settings":
+            from sarathi.config.config_manager import config
+            
+            print(f"\n{format_bold('Current Chat Settings:')}")
+            print(f"  Model:          {config.get('agents.chat.model', 'gpt-4o')}")
+            print(f"  Provider:       {config.get('agents.chat.provider', 'openai')}")
+            print(f"  Streaming:      {'on' if config.get('agents.chat.stream', True) else 'off'}")
+            print(f"  Reasoning Mode: {'on' if config.get('agents.chat.reasoning_model', False) else 'off'}")
+            print(f"  Temperature:    {config.get('agents.chat.temperature', 0.5)}")
+            print(f"  Simple Mode:    {'on' if config.get('core.simple_mode', False) else 'off'}")
+            print()
         elif cmd == "/usage":
             from sarathi.utils.usage import usage_tracker
 
             print(usage_tracker.get_summary())
+        elif cmd == "/help":
+            print(f"\n{format_bold('Available Commands:')}")
+            print("  /exit, /quit    - Exit the chat")
+            print("  /clear          - Clear conversation history")
+            print("  /history        - Show conversation history")
+            print("  /model <name>   - Switch to a different model")
+            print("  /stream <on|off> - Toggle streaming mode")
+            print("  /reasoning <on|off> - Toggle reasoning model mode")
+            print("  /settings       - Show current settings")
+            print("  /usage          - Show token usage statistics")
+            print("  /reindex        - Re-index project files for @-mentions")
+            print("  /help           - Show this help message")
+            print()
         else:
-            print(f"Unknown command: {cmd}")
+            print(f"Unknown command: {cmd}. Type /help for available commands.")
 
 
 def setup_args(subparsers, opname="chat"):

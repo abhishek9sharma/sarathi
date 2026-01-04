@@ -1,6 +1,12 @@
 core:
   provider: openai
   timeout: 30
+  simple_mode: false # Set to true for simple text-based permission prompts
+  batching:
+    small_file_threshold: 500
+    max_batch_size: 3
+    max_concurrent: 4
+    max_diff_chars: 2000
 
 providers:
   openai:
@@ -144,17 +150,23 @@ agents:
     provider: openai
     model: gpt-4o-mini
     temperature: 0.7
+    stream: true
   qahelper:
     provider: openai
     model: gpt-4o-mini
+    stream: true
   update_docstrings:
     provider: openai
     model: gpt-4o-mini
+    stream: true
   code_editor:
     provider: openai
     model: gpt-4o
     temperature: 0.3
+    stream: true
   chat:
     provider: openai
-    model: gpt-4o
+    model: gpt-5
     temperature: 0.5
+    stream: true
+    # reasoning_model: false # Set to true for reasoning models like o1 or deepseek-r1

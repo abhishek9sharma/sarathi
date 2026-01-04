@@ -23,12 +23,6 @@ class ParallelDiffAnalyzer:
     2. Fan-in: Coordinate results into a unified commit message
     """
 
-    # Cost optimization thresholds
-    SMALL_FILE_THRESHOLD = 500  # chars - batch files smaller than this
-    MAX_BATCH_SIZE = 3  # files per batch
-    MAX_CONCURRENT = 4  # parallel LLM calls
-    MAX_DIFF_CHARS = 2000  # truncate large diffs
-
     def __init__(self, agent_name: str = "commit_generator"):
         """
         Initialize the analyzer.
@@ -38,6 +32,15 @@ class ParallelDiffAnalyzer:
         """
         self.agent_name = agent_name
         self.client = AsyncLLMClient(agent_name)
+
+        # Cost optimization thresholds from config
+        self.small_file_threshold = config.get("core.batching.small_file_threshold", 500)
+        self.max_batch_size = config.get("core.batching.max_batch_size", 3)
+        self.max_concurrent = config.get("core.batching.max_concurrent", 4)
+        self.max_diff_chars = config.get("core.batching.max_diff_chars", 2000)
+
+        # Track ignored files
+        self.ignored_files = []
 
         # Load prompts from config
         self.file_prompt = config.get(
@@ -77,22 +80,23 @@ File changes:
         )
         return [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
 
-    def get_file_diff(self, filepath: str) -> str:
+    def get_file_diff(self, filepath: str) -> Optional[str]:
         """
-        Get diff for a single file, truncated for cost efficiency.
+        Get diff for a single file, truncated/ignored for cost efficiency.
 
         Args:
             filepath: Path to the file.
 
         Returns:
-            The diff output, truncated if too large.
+            The diff output, or None if the file is ignored due to size.
         """
         result = subprocess.run(
             ["git", "diff", "--staged", "--", filepath], capture_output=True, text=True
         )
         diff = result.stdout
-        if len(diff) > self.MAX_DIFF_CHARS:
-            diff = diff[: self.MAX_DIFF_CHARS] + "\n... (truncated for brevity)"
+        if len(diff) > self.max_diff_chars:
+            self.ignored_files.append((filepath, len(diff)))
+            return None
         return diff
 
     # --- Batching Logic ---
@@ -113,9 +117,12 @@ File changes:
         batches: List[List[Tuple[str, str]]] = []
 
         for filepath, diff in file_diffs.items():
-            if len(diff) < self.SMALL_FILE_THRESHOLD:
+            if diff is None:
+                continue
+
+            if len(diff) < self.small_file_threshold:
                 small_files.append((filepath, diff))
-                if len(small_files) >= self.MAX_BATCH_SIZE:
+                if len(small_files) >= self.max_batch_size:
                     batches.append(small_files[:])
                     small_files = []
             else:
@@ -217,10 +224,21 @@ File changes:
 
         # Create cost-efficient batches
         batches = self.create_batches(file_diffs)
+        
+        if self.ignored_files:
+            from sarathi.utils.formatters import format_yellow
+            for filepath, size in self.ignored_files:
+                print(f"{format_yellow('⚠️  Ignoring large file:')} {filepath} ({size} chars > {self.max_diff_chars})")
+
+        if not batches:
+            if self.ignored_files:
+                return "All staged changes were in files too large to analyze."
+            return "No analyzable changes found."
+
         print(f"📦 Created {len(batches)} batch(es) for parallel analysis")
 
         # Run analysis in parallel with concurrency limit
-        semaphore = asyncio.Semaphore(self.MAX_CONCURRENT)
+        semaphore = asyncio.Semaphore(self.max_concurrent)
         tasks = [self.analyze_batch(b, semaphore) for b in batches]
         results = await asyncio.gather(*tasks)
 
