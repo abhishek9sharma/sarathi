@@ -4,7 +4,16 @@ from pathlib import Path
 import yaml
 
 DEFAULT_CONFIG = {
-    "core": {"provider": "openai", "timeout": 30},
+    "core": {
+        "provider": "openai",
+        "timeout": 30,
+        "batching": {
+            "small_file_threshold": 500,
+            "max_batch_size": 3,
+            "max_concurrent": 4,
+            "max_diff_chars": 2000,
+        },
+    },
     "providers": {
         "openai": {"base_url": "https://api.openai.com/v1"},
         "ollama": {"base_url": "http://localhost:11434", "model": "llama3"},

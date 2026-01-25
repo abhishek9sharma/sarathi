@@ -1,44 +1,100 @@
-import json
-import time
+"""
+Agent Engine Module - Orchestrates LLM interactions with tool support.
 
-from sarathi.llm.call_llm import call_llm_model
+This module is responsible for:
+- Managing conversation history
+- Coordinating between LLM client and tool execution
+- Handling streaming and non-streaming modes
+- Processing tool calls and responses
+"""
+
+from typing import Any, Callable, Dict, Generator, List, Optional, Union
+
+from sarathi.llm.llm_client import LLMClient
+from sarathi.llm.response_parser import ParsedChunk, ResponseParser, ToolCallAggregator
 from sarathi.llm.tools import registry
 
 
 class AgentEngine:
+    """
+    Engine for running LLM-powered agents with tool support.
+
+    Supports both streaming and non-streaming modes, with special
+    handling for reasoning models.
+    """
+
     def __init__(
         self,
-        agent_name,
-        system_prompt=None,
-        tools=None,
-        tool_confirmation_callback=None,
+        agent_name: str,
+        system_prompt: Optional[str] = None,
+        tools: Optional[List[str]] = None,
+        tool_confirmation_callback: Optional[Callable[[str, str], bool]] = None,
     ):
+        """
+        Initialize the agent engine.
+
+        Args:
+            agent_name: Name of the agent configuration to use.
+            system_prompt: Optional system prompt override.
+            tools: List of tool names to enable.
+            tool_confirmation_callback: Callback for tool execution confirmation.
+        """
         from sarathi.config.config_manager import config
 
         self.agent_name = agent_name
+        self.client = LLMClient(agent_name)
+        self.parser = ResponseParser(is_reasoning_model=self.client.is_reasoning_model)
 
-        # If no explicit system_prompt provided, try loading from config
+        # Load system prompt from config if not provided
         if system_prompt is None:
             system_prompt = config.get(f"prompts.{agent_name}")
 
         self.system_prompt = system_prompt
         self.tools = tools or []
         self.tool_confirmation_callback = tool_confirmation_callback
-        self.messages = []
+
+        # Initialize message history
+        self.messages: List[Dict] = []
         if system_prompt:
             self.messages.append({"role": "system", "content": system_prompt})
 
-    def run(self, user_input):
-        """Blocking version of run."""
-        res = ""
+    def run(self, user_input: str) -> str:
+        """
+        Blocking version of run.
+
+        Args:
+            user_input: User's input message.
+
+        Returns:
+            Complete response as a string.
+        """
+        result = ""
         for chunk in self.run_stream(user_input):
             if isinstance(chunk, str):
-                res += chunk
-        return res
+                result += chunk
+        return result
 
-    def run_stream(self, user_input):
-        """Generator version of run that yields content tokens."""
+    def run_stream(
+        self, user_input: str
+    ) -> Generator[Union[str, Dict[str, Any]], None, None]:
+        """
+        Generator version of run that yields content tokens and events.
+
+        Args:
+            user_input: User's input message.
+
+        Yields:
+            String tokens for content, or dict events for tool calls.
+        """
         self.messages.append({"role": "user", "content": user_input})
+
+        # Determine streaming mode
+        use_streaming = self.client.is_streaming
+        is_reasoning = self.client.is_reasoning_model
+
+        # Reasoning models may default to non-streaming
+        if is_reasoning and "stream" not in self.client.agent_conf:
+            use_streaming = False
 
         max_iterations = 10
         iteration = 0
@@ -46,281 +102,150 @@ class AgentEngine:
         while iteration < max_iterations:
             iteration += 1
 
-            # Implementation of streaming call
-            full_content = ""
-            tool_calls_chunks = {}  # index -> tool_call object
+            if use_streaming:
+                yield from self._run_streaming_iteration()
+            else:
+                yield from self._run_sync_iteration()
 
-            for chunk in self._call_llm_stream():
-                choices = chunk.get("choices")
-                if not choices:
-                    continue
-                
-                delta = choices[0].get("delta", {})
+            # Check if we should continue (tool calls were processed)
+            # The iteration methods return True if we should continue
+            if not self._should_continue_iteration():
+                return
 
-                # Handle content
-                content = delta.get("content")
-                if content:
-                    full_content += content
-                    yield content
+        yield "⚠️ Safety Limit reached (10 tool iterations)."
 
-                # Handle tool calls
-                tool_calls_delta = delta.get("tool_calls")
-                if tool_calls_delta:
-                    for tc in tool_calls_delta:
-                        idx = tc.get("index", 0)
-                        if idx not in tool_calls_chunks:
-                            tool_calls_chunks[idx] = {
-                                "id": tc.get("id"),
-                                "type": "function",
-                                "function": {"name": "", "arguments": ""},
-                            }
+    def _run_streaming_iteration(
+        self,
+    ) -> Generator[Union[str, Dict[str, Any]], None, None]:
+        """
+        Run a single streaming iteration.
 
-                        f = tc.get("function", {})
-                        if tc.get("id"):
-                            tool_calls_chunks[idx]["id"] = tc.get("id")
-                        if f.get("name"):
-                            tool_calls_chunks[idx]["function"]["name"] += f.get("name")
-                        if f.get("arguments"):
-                            tool_calls_chunks[idx]["function"]["arguments"] += f.get(
-                                "arguments"
-                            )
+        Yields:
+            Content tokens and tool call events.
+        """
+        tool_aggregator = ToolCallAggregator()
+        full_content = ""
+        full_reasoning = ""
 
-            # After stream ends, check for tool calls
-            if tool_calls_chunks:
-                tool_calls = list(tool_calls_chunks.values())
-                # Constructassistant message for history
-                assistant_msg = {
-                    "role": "assistant",
-                    "content": full_content or None,
-                    "tool_calls": tool_calls,
-                }
-                self.messages.append(assistant_msg)
+        # Get tool definitions if tools are enabled
+        tools = registry.get_tool_definitions() if self.tools else None
 
-                for tool_call in tool_calls:
-                    func_name = tool_call["function"]["name"]
-                    func_args = tool_call["function"]["arguments"]
+        for chunk in self.client.call_streaming(self.messages, tools):
+            parsed = self.parser.parse_streaming_chunk(chunk)
 
-                    yield f"\n[dim]Calling tool: {func_name}...[/dim]\n"
+            # Yield content
+            if parsed.content:
+                full_content += parsed.content
+                yield parsed.content
 
-                    if self.tool_confirmation_callback:
-                        if not self.tool_confirmation_callback(func_name, func_args):
-                            self.messages.append(
-                                {
-                                    "role": "tool",
-                                    "tool_call_id": tool_call.get("id"),
-                                    "name": func_name,
-                                    "content": "Tool execution was denied by the user.",
-                                }
-                            )
-                            continue
+            # Accumulate reasoning content (optionally yield it too)
+            if parsed.reasoning_content:
+                full_reasoning += parsed.reasoning_content
+                # Optionally yield reasoning with a special marker
+                # yield {"type": "reasoning", "content": parsed.reasoning_content}
 
-                    result = registry.call_tool(func_name, func_args)
+            # Aggregate tool calls
+            if parsed.tool_calls:
+                tool_aggregator.add_chunk(parsed.tool_calls)
+
+        # Process tool calls if any
+        if tool_aggregator.has_calls():
+            yield from self._process_tool_calls(
+                tool_aggregator.get_complete_calls(), full_content
+            )
+            self._mark_continue_iteration()
+        else:
+            if full_content:
+                self.messages.append({"role": "assistant", "content": full_content})
+            self._mark_stop_iteration()
+
+    def _run_sync_iteration(
+        self,
+    ) -> Generator[Union[str, Dict[str, Any]], None, None]:
+        """
+        Run a single non-streaming iteration.
+
+        Yields:
+            Content as a single chunk, and tool call events.
+        """
+        tools = registry.get_tool_definitions() if self.tools else None
+
+        response = self.client.call_sync(self.messages, tools)
+        parsed = self.parser.parse_sync_response(response)
+
+        # Yield content
+        if parsed.content:
+            yield parsed.content
+
+        # Process tool calls if any
+        if parsed.tool_calls:
+            yield from self._process_tool_calls(parsed.tool_calls, parsed.content)
+            self._mark_continue_iteration()
+        else:
+            if parsed.content:
+                self.messages.append({"role": "assistant", "content": parsed.content})
+            self._mark_stop_iteration()
+
+    def _process_tool_calls(
+        self, tool_calls: List[Dict], content: Optional[str]
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        Process tool calls and execute them.
+
+        Args:
+            tool_calls: List of tool call dictionaries.
+            content: Any content from the assistant message.
+
+        Yields:
+            Tool call events.
+        """
+        # Record assistant message with tool calls
+        assistant_msg = {
+            "role": "assistant",
+            "content": content or None,
+            "tool_calls": tool_calls,
+        }
+        self.messages.append(assistant_msg)
+
+        for tool_call in tool_calls:
+            func_name = tool_call["function"]["name"]
+            func_args = tool_call["function"]["arguments"]
+
+            # Yield structured event
+            yield {"type": "tool_call", "name": func_name, "args": func_args}
+
+            # Check confirmation callback
+            if self.tool_confirmation_callback:
+                if not self.tool_confirmation_callback(func_name, func_args):
                     self.messages.append(
                         {
                             "role": "tool",
                             "tool_call_id": tool_call.get("id"),
                             "name": func_name,
-                            "content": str(result),
+                            "content": "Tool execution was denied by the user.",
                         }
                     )
-                # Continue loop
-                continue
-            else:
-                # No tool calls, finish
-                if full_content:
-                    self.messages.append({"role": "assistant", "content": full_content})
-                return
-
-        yield "⚠️ Safety Limit reached (10 tool iterations)."
-
-    def _call_llm_stream(self):
-        import httpx
-
-        from sarathi.config.config_manager import config
-        from sarathi.llm.call_llm import get_agent_config
-        from sarathi.utils.usage import usage_tracker
-
-        agent_conf = get_agent_config(self.agent_name)
-        provider_name = agent_conf.get("provider", "openai")
-        provider_conf = config.get_provider_config(provider_name)
-        base_url = provider_conf.get("base_url")
-        url = f"{base_url.rstrip('/')}/chat/completions"
-        api_key = provider_conf.get("api_key")
-
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        body = {
-            "model": agent_conf.get("model", "gpt-4o-mini"),
-            "messages": self.messages,
-            "tools": registry.get_tool_definitions() if self.tools else None,
-            "temperature": agent_conf.get("temperature", 0.7),
-            "stream": True,  # Enable streaming
-            "stream_options": {"include_usage": True},
-        }
-
-        if not body["tools"]:
-            del body["tools"]
-
-        if config.get("core.debug"):
-            from sarathi.utils.formatters import format_yellow
-
-            print(f"\n{format_yellow('--- DEBUG: LLM STREAM REQUEST BODY ---')}")
-            print(json.dumps(body, indent=2))
-            print(f"{format_yellow('--- END DEBUG ---')}\n")
-
-        start_time = time.time()
-        max_retries = config.get("core.llm_retries", 3)
-        retry_delay = 2
-
-        for attempt in range(max_retries + 1):
-            try:
-                with httpx.Client(
-                    timeout=config.get("core.timeout", 30),
-                    verify=config.get("core.verify_ssl", True),
-                ) as client:
-                    with client.stream(
-                        "POST", url, headers=headers, json=body, timeout=None
-                    ) as res:
-                        if res.status_code == 429:
-                            if attempt < max_retries:
-                                print(
-                                    f"⚠️  Rate limited (429). Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
-                                )
-                                time.sleep(retry_delay)
-                                retry_delay *= 2
-                                continue
-
-                        res.raise_for_status()
-
-                        # Accumulate usage for streaming
-                        total_prompt_tokens = 0
-                        total_completion_tokens = 0
-
-                        for line in res.iter_lines():
-                            if not line.strip().startswith("data: "):
-                                continue
-
-                            json_data = line.strip()[len("data: ") :]
-                            if json_data == "[DONE]":
-                                continue
-                            try:
-                                chunk = json.loads(json_data)
-
-                                # Accumulate usage from each chunk if available
-                                usage = chunk.get("usage")
-                                if usage:
-                                    # Some providers send partials, some only send final
-                                    # We take the max or the last non-zero for prompt/completion
-                                    pt = usage.get("prompt_tokens") or usage.get("input_tokens") or 0
-                                    ct = usage.get("completion_tokens") or usage.get("output_tokens") or 0
-                                    
-                                    if pt > 0:
-                                        total_prompt_tokens = pt
-                                    if ct > 0:
-                                        total_completion_tokens = ct
-
-                                yield chunk
-                            except json.JSONDecodeError:
-                                continue
-
-                        end_time = time.time()
-                        # Record total usage after stream ends
-                        usage_tracker.record_call(
-                            end_time - start_time,
-                            {
-                                "prompt_tokens": total_prompt_tokens,
-                                "completion_tokens": total_completion_tokens,
-                                "total_tokens": total_prompt_tokens
-                                + total_completion_tokens,
-                            },
-                        )
-                        return  # Stream finished successfully
-            except httpx.HTTPError as e:
-                if attempt < max_retries:
-                    print(
-                        f"⚠️  LLM stream call failed: {e}. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
-                    )
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
                     continue
-                raise
 
-    def _call_llm(self):
-        # We need a version of call_llm_model that accepts full message history and tools
-        # Let's adapt call_llm_model or import it and use its logic
-        import httpx
+            # Execute tool
+            result = registry.call_tool(func_name, func_args)
+            self.messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.get("id"),
+                    "name": func_name,
+                    "content": str(result),
+                }
+            )
 
-        from sarathi.config.config_manager import config
-        from sarathi.llm.call_llm import get_agent_config
-        from sarathi.utils.usage import usage_tracker
+    def _mark_continue_iteration(self) -> None:
+        """Mark that the main loop should continue."""
+        self._should_continue = True
 
-        agent_conf = get_agent_config(self.agent_name)
-        provider_name = agent_conf.get("provider", "openai")
-        provider_conf = config.get_provider_config(provider_name)
-        base_url = provider_conf.get("base_url")
-        url = f"{base_url.rstrip('/')}/chat/completions"
-        api_key = provider_conf.get("api_key")
+    def _mark_stop_iteration(self) -> None:
+        """Mark that the main loop should stop."""
+        self._should_continue = False
 
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        body = {
-            "model": agent_conf.get("model", "gpt-4o-mini"),
-            "messages": self.messages,
-            "tools": registry.get_tool_definitions() if self.tools else None,
-            "temperature": agent_conf.get("temperature", 0.7),
-        }
-
-        if not body["tools"]:
-            del body["tools"]
-
-        if config.get("core.debug"):
-            from sarathi.utils.formatters import format_yellow
-
-            print(f"\n{format_yellow('--- DEBUG: LLM REQUEST BODY ---')}")
-            print(json.dumps(body, indent=2))
-            print(f"{format_yellow('--- END DEBUG ---')}\n")
-
-        start_time = time.time()
-        max_retries = config.get("core.llm_retries", 3)
-        retry_delay = 2
-
-        for attempt in range(max_retries + 1):
-            try:
-                with httpx.Client(
-                    timeout=config.get("core.timeout", 30),
-                    verify=config.get("core.verify_ssl", True),
-                ) as client:
-                    res = client.post(url, headers=headers, json=body)
-
-                    if res.status_code == 429:
-                        if attempt < max_retries:
-                            print(
-                                f"⚠️  Rate limited (429). Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
-                            )
-                            time.sleep(retry_delay)
-                            retry_delay *= 2
-                            continue
-
-                    res.raise_for_status()
-                    end_time = time.time()
-
-                    data = res.json()
-
-                    # Record usage
-                    usage = data.get("usage")
-                    usage_tracker.record_call(end_time - start_time, usage)
-
-                    return data
-            except httpx.HTTPError as e:
-                if attempt < max_retries:
-                    print(
-                        f"⚠️  LLM call failed: {e}. Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
-                    )
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                raise
+    def _should_continue_iteration(self) -> bool:
+        """Check if the main loop should continue."""
+        return getattr(self, "_should_continue", False)

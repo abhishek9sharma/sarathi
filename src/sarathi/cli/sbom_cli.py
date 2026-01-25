@@ -549,6 +549,18 @@ def execute_imports(args):
 
     lib_to_files, package_info = get_sbom_imports(directory)
 
+    # Filter by specific library if requested
+    if args.lib:
+        target_lib = args.lib.lower()
+        # Filter lib_to_files (filtering keys)
+        lib_to_files = {
+            k: v for k, v in lib_to_files.items() if k.lower() == target_lib
+        }
+        # Filter package_info (optional, strictly speaking only used if lib_to_files has the key)
+        package_info = {
+            k: v for k, v in package_info.items() if k.lower() == target_lib
+        }
+
     if args.json:
         console.print(
             json_lib.dumps(
@@ -660,6 +672,9 @@ def setup_args(subparsers, opname="sbom"):
         "path", nargs="?", help="Path to scan (default: current directory)"
     )
     imp_parser.add_argument("--json", action="store_true", help="Output in JSON format")
+    imp_parser.add_argument(
+        "--lib", help="Filter for a specific library/package name"
+    )
 
     # Subcommand: depgraph
     dep_parser = sbom_subparsers.add_parser(
