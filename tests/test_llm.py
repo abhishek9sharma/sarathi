@@ -124,22 +124,32 @@ def test_llm_respects_verify_ssl(mock_client_class, mock_config):
     mock_client_class.assert_called_with(timeout=30, verify=False)
 
 
-@patch("httpx.Client")
-def test_agent_engine_respects_verify_ssl(mock_client_class, mock_config):
+@patch("sarathi.llm.llm_client.httpx.Client")
+@patch("sarathi.llm.llm_client.config")
+def test_agent_engine_respects_verify_ssl(mock_llm_config, mock_client_class):
     mock_client = mock_client_class.return_value.__enter__.return_value
-    mock_config.get.side_effect = lambda key, default=None: (
-        False
-        if key == "core.verify_ssl"
+    
+    # Configure the config mock
+    mock_llm_config.get.side_effect = lambda key, default=None: (
+        False if key == "core.verify_ssl"
         else (30 if key == "core.timeout" else default)
     )
+    mock_llm_config.get_provider_config.return_value = {
+        "base_url": "https://api.openai.com/v1",
+        "api_key": "test_key",
+    }
 
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
     mock_client.post.return_value = mock_response
 
-    agent = AgentEngine("chat", system_prompt="test")
-    agent._call_llm()
+    # Import and test client directly since AgentEngine now uses LLMClient
+    from sarathi.llm.llm_client import LLMClient
+    client = LLMClient("chat")
+    # Force load config
+    client._agent_conf = {"model": "test", "stream": True}
+    client.call_sync([{"role": "user", "content": "test"}])
 
     mock_client_class.assert_called_with(timeout=30, verify=False)
 
@@ -169,11 +179,11 @@ def test_call_llm_retries_on_429(mock_sleep, mock_client_class, mock_config):
     assert mock_sleep.call_count == 2
 
 
-@patch("sarathi.llm.agent_engine.AgentEngine._call_llm_stream")
+@patch("sarathi.llm.llm_client.LLMClient.call_streaming")
 def test_agent_engine_safety_limit(mock_call_stream):
     # Mock LLM always returning a tool call
-    mock_call_stream.return_value = [
-        {
+    def mock_streaming(*args, **kwargs):
+        yield {
             "choices": [
                 {
                     "delta": {
@@ -191,16 +201,19 @@ def test_agent_engine_safety_limit(mock_call_stream):
                 }
             ]
         }
-    ]
+    
+    mock_call_stream.side_effect = mock_streaming
 
     # Mock registry to avoid actual tool execution
-    with patch("sarathi.llm.tools.registry.call_tool") as mock_tool:
-        mock_tool.return_value = "content"
-        # Avoid permission check
-        agent = AgentEngine("chat")
-        # Collect tokens from stream
-        tokens = list(agent.run_stream("Infinite loop please"))
-        result = "".join([t for t in tokens if isinstance(t, str)])
+    with patch("sarathi.llm.agent_engine.registry.call_tool") as mock_tool:
+        with patch("sarathi.llm.agent_engine.registry.get_tool_definitions") as mock_defs:
+            mock_tool.return_value = "content"
+            mock_defs.return_value = [{"type": "function", "function": {"name": "read_file"}}]
+            
+            agent = AgentEngine("chat", tools=["read_file"])
+            # Collect tokens from stream
+            tokens = list(agent.run_stream("Infinite loop please"))
+            result = "".join([t for t in tokens if isinstance(t, str)])
 
-        assert "Safety Limit reached" in result
-        assert mock_call_stream.call_count == 10
+            assert "Safety Limit reached" in result
+            assert mock_call_stream.call_count == 10

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sarathi"
-version = "0.0.5"
+version = "0.0.5a"
 description = "A CLI coding assistant"
 readme = "README.md"
 authors = [
@@ -27,6 +27,7 @@ dependencies = [
     "aiohttp>=3.10.11",
     "questionary",
     "rich",
+    "dataclasses"
 ]
 
 [project.optional-dependencies]
